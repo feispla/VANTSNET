@@ -44,6 +44,6 @@ jobs:
 
       - name: Análisis SonarCloud
         if: steps.check.outputs.skip == 'false'
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
