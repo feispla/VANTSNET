@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Tests · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependencias (lockfile congelado)
+        run: bun install --frozen-lockfile
+
+      - name: Preparar base de datos de CI (SQLite)
+        run: bunx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: file:./ci.db
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Tests
+        run: bun run test
+        env:
+          DATABASE_URL: file:./ci.db
+
+      - name: Build de producción
+        run: bun run build
+        env:
+          DATABASE_URL: file:./ci.db
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "### Resultado CI" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Lint: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

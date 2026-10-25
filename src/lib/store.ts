@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import type { MatchDetailResponse, ProfileResponse } from '@/lib/valorant/types';
 
-export type View = 'home' | 'profile' | 'match';
+export type View = 'home' | 'profile' | 'match' | 'hub';
 
 interface VantsnetState {
   view: View;
@@ -20,6 +20,7 @@ interface VantsnetState {
   search: (riotId: string, region: string) => Promise<void>;
   openMatch: (matchId: string) => Promise<void>;
   goHome: () => void;
+  goHub: () => void;
   backToProfile: () => void;
   clearError: () => void;
 }
@@ -89,6 +90,8 @@ export const useVantsnet = create<VantsnetState>((set, get) => ({
   },
 
   goHome: () => set({ view: 'home', error: null }),
+
+  goHub: () => set({ view: 'hub', error: null }),
 
   backToProfile: () => set({ view: 'profile', error: null }),
 }));

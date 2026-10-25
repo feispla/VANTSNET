@@ -1,8 +1,8 @@
 # VANTSNET
 
-> Red de estadísticas gaming — un solo backend, varios juegos, una comunidad.
+> Red de estadísticas gaming y plataforma competitiva — un solo backend, varios juegos, una comunidad.
 
-**VANTSNET** es un proyecto para construir una red de estadísticas de videojuegos: perfiles de jugadores, historial de partidas, leaderboards y una API pública propia. La arquitectura replica los patrones de las plataformas de estadísticas líderes en producción: colectores con colas y caché, ingesta de datos desde servidores de juego, API con autenticación por clave y una capa de presentación multi-juego (un tema por juego sobre un solo código base).
+**VANTSNET** es una plataforma de estadísticas de videojuegos y ecosistema competitivo: perfiles de jugadores, historial de partidas, torneos con equipos e inscripciones, y una API pública propia. La arquitectura replica los patrones de las plataformas líderes del sector: colectores con caché, persistencia única de partidas, API con autenticación y una capa de presentación multi-juego.
 
 ## Prototipo funcional (este repositorio)
 
@@ -11,6 +11,20 @@ Este repo ya incluye un **prototipo funcional de la red** construido con la ruta
 - **Modo demo inmediato**: busca `Demo#VANTS` (región Europe) sin ninguna API key — 8 partidas simuladas de forma determinista con estadísticas agregadas (winrate, K/D, ACS, ADR, HS%) y scoreboard por partida.
 - **Ruta real con Riot API**: con una clave de [developer.riotgames.com](https://developer.riotgames.com) resuelve Riot IDs reales (`Nombre#TAG`) vía `account-v1` y verifica cuentas en tiempo real. Los endpoints de partidas de Valorant (`VAL-MATCH-V1`) están reservados por Riot para claves de producción — la app lo detecta, lo explica y muestra la cuenta ya verificada. El expediente para solicitar esa clave está en [`docs/SOLICITUD-CLAVE-PRODUCCION.md`](docs/SOLICITUD-CLAVE-PRODUCCION.md).
 - **Primer endpoint de Steam (Fase 4)**: `GET /api/steam/resolve?query=<steamid64|vanity>` resuelve perfiles de Steam (SteamID64, vanity URL o URL completa) y la biblioteca de juegos pública vía Steam Web API.
+- **Ecosistema competitivo (nuevo)**: torneos con estados (borrador → inscripción → en juego → completado), equipos con plantillas, inscripciones anti-duplicado, partidas con resultados validados y **registro de auditoría** completo. Se gestiona desde la vista «Competitivo» de la app (botón en la cabecera) con token de administración.
+- **Discord OAuth2 y FACEIT** (nuevo): módulos de integración implementados con estados honestos «no configurado» hasta definir las credenciales — guía en [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+- **Panel de estado**: pestaña «Estado» y `GET /api/health` muestran la salud real del servicio y qué integraciones están activas (sin exponer secretos).
+
+### Calidad y CI
+
+| Check | Herramienta | Estado |
+|-------|-------------|--------|
+| Lint + Typecheck + Tests + Build | GitHub Actions (`ci.yml`, Bun con lockfile congelado) | Ejecuta en cada push/PR |
+| Análisis semántico de seguridad | **CodeQL** (`security-extended`, JS/TS) | Gratis en repo público |
+| Quality Gate | **SonarCloud** | Se auto-omite hasta añadir `SONAR_TOKEN` |
+| Dependencias | Dependabot (npm + actions, semanal) | Activo tras merge |
+
+14 tests de unidad (Vitest) cubren la lógica crítica: state anti-CSRF de Discord, validadores zod, reglas de partidas de torneo, slugify. Ver [`docs/TESTING.md`](docs/TESTING.md).
 
 | Captura | Vista |
 |---------|-------|
@@ -20,19 +34,27 @@ Este repo ya incluye un **prototipo funcional de la red** construido con la ruta
 ### Puesta en marcha
 
 ```bash
-bun install        # o npm install
-cp .env.example .env   # opcional: añade tus claves de Riot/Steam
+bun install            # o npm install
+cp .env.example .env   # opcional: añade tus claves (Riot/Steam/admin/Discord/FACEIT)
 bunx prisma db push    # o npx prisma db push
 bun run dev            # o npm run dev → http://localhost:3000
+
+bun run lint        # ESLint
+bun run typecheck   # tsc --noEmit
+bun run test        # vitest (14 tests)
+bun run build       # build de producción
 ```
 
-Variables de entorno (ver [`.env.example`](.env.example)):
+Variables de entorno (referencia completa en [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)):
 
 | Variable | Obligatoria | Descripción |
 |----------|-------------|-------------|
-| `DATABASE_URL` | Sí | SQLite en desarrollo (`file:../db/custom.db`); PostgreSQL en producción |
+| `DATABASE_URL` | Sí | SQLite en desarrollo (`file:../db/custom.db`); PostgreSQL/Neon en producción ([`docs/DATABASE.md`](docs/DATABASE.md)) |
 | `RIOT_API_KEY` | No | Clave de Riot: habilita la verificación real de Riot IDs. Sin ella, solo el modo demo |
 | `STEAM_API_KEY` | No | Clave gratuita de Steam Web API: habilita `/api/steam/resolve` |
+| `ADMIN_TOKEN` | Para admin | Mutaciones de torneos/equipos (header `X-Admin-Token`); sin él, `503` honesto |
+| `DISCORD_*` | Para Discord | OAuth2 identidad (`CLIENT_ID`, `CLIENT_SECRET`, `OAUTH_STATE_SECRET`, `REDIRECT_URI`) |
+| `FACEIT_API_KEY` | Para FACEIT | Server key de FACEIT Data API v4 |
 
 > Las claves viven **solo en el backend** (`.env`, excluido del repo por `.gitignore`) y nunca se exponen al cliente.
 
@@ -43,6 +65,12 @@ Variables de entorno (ver [`.env.example`](.env.example)):
 | `GET /api/valorant/profile?riotId=Nombre#TAG&region=europe` | Perfil agregado: winrate, K/D, ACS, ADR, HS%, agentes y últimas partidas. `Demo#VANTS` siempre sirve datos demo |
 | `GET /api/valorant/match/{matchId}` | Scoreboard completo de una partida (desde la caché en BD o colectada una única vez desde Riot) |
 | `GET /api/steam/resolve?query=<steamid64\|vanity>` | Perfil de Steam + top de juegos por tiempo de juego (requiere perfil público para la biblioteca) |
+| `GET /api/health` | Estado del servicio y de integraciones (booleanos, sin secretos) |
+| `GET /api/tournaments` · `GET /api/tournaments/{id}` | Torneos (lista/detalle con inscripciones y partidas) — público |
+| `GET /api/teams` | Equipos con plantillas — público |
+| `POST/PATCH /api/tournaments/...` · `POST /api/teams/...` | Mutaciones competitivas — exigen `X-Admin-Token`; registran auditoría |
+| `GET /api/faceit/player?nickname=X` | Jugador FACEIT + historial reciente (503 honesto sin clave) |
+| `GET /api/auth/discord/start` · `status` | Inicio del enlace Discord OAuth y estado de configuración |
 
 ## Arquitectura
 
