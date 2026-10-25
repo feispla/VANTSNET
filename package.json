@@ -22,6 +22,8 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.1.1",
     "@mdxeditor/editor": "^3.39.1",
+    "@prisma/composer": "0.28.0",
+    "@prisma/composer-prisma-cloud": "0.28.0",
     "@prisma/orm-postgres": "^8.0.0-rc.20",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -53,10 +55,12 @@
     "@reactuses/core": "^6.0.5",
     "@tanstack/react-query": "^5.82.0",
     "@tanstack/react-table": "^8.21.3",
+    "alchemy": "2.0.0-beta.78",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "effect": "4.0.0-rc.115",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.2",
     "input-otp": "^1.4.2",
@@ -96,5 +100,16 @@
     "tw-animate-css": "^1.3.5",
     "typescript": "^5",
     "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "@effect/platform-bun": "4.0.0-rc.115",
+    "@effect/platform-node": "4.0.0-rc.115",
+    "@effect/platform-node-shared": "4.0.0-rc.115",
+    "@effect/sql-d1": "4.0.0-rc.115",
+    "@effect/sql-mysql2": "4.0.0-rc.115",
+    "@effect/sql-pg": "4.0.0-rc.115",
+    "@effect/sql-sqlite-do": "4.0.0-rc.115",
+    "@effect/vitest": "4.0.0-rc.115",
+    "effect": "4.0.0-rc.115"
   }
 }
