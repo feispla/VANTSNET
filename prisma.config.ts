@@ -15,7 +15,15 @@ export default definePrismaConfig({
   orm: ormPostgresConfig({
     contract: "./src/prisma/contract.prisma",
     db: {
-      connection: process.env.DATABASE_URL!,
+      // DATABASE_URL: desarrollo local y CI. En Prisma Cloud la etapa de
+      // migración recibe la URL directamente (dep `db` de module.mjs) y
+      // DATABASE_URL puede existir como placeholder "-" (claim del composer),
+      // así que se toma la primera candidata con formato plausible. El
+      // runtime del servicio resuelve igual (ver src/prisma/db.ts).
+      connection:
+        [process.env.DATABASE_URL, process.env.COMPOSER_VANTSNET_DB_URL].find(
+          (v) => v && /^postgres(?:ql)?:\/\//.test(v.trim()),
+        ) ?? process.env.DATABASE_URL!,
     },
   }),
   composer: composer({

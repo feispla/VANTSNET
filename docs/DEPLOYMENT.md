@@ -1,6 +1,17 @@
 # Despliegue de VANTSNET
 
-> Estado: **documentado, no desplegado**. Ninguna plataforma fue tocada desde esta fase (no hay autorización de despliegue ni credenciales de dominio). Sigue exactamente la arquitectura existente (Next.js standalone + Node).
+> Estado: **Prisma Cloud activo** — el repo tiene la integración oficial (`module.mjs` + `service.mjs` + workflow `prisma-deploy.yml`, PR #13). Las opciones VPS/edge de abajo siguen documentadas como alternativas.
+
+## Opción 0 — Prisma Cloud (activa, recomendada)
+
+Flujo automático por push (workflow `prisma-deploy.yml`):
+
+1. `main` → deploy a **producción**; cualquier otra rama → **preview** con BD propia; borrar la rama destruye el preview.
+2. La BD es un **dep declarado** en `service.mjs` (`db: postgres(...)`); la plataforma la aprovisiona y ejecuta la etapa `database-migrate` (migraciones versionadas de `migrations/`, replay-only).
+3. La app recibe la URL en runtime como `COMPOSER_VANTSNET_DB_URL` (resuelta por `src/prisma/db.ts`); no hace falta definir `DATABASE_URL` en la plataforma.
+4. Diagnóstico del primer fallo (25-oct-2026) y su fix: ver `docs/KNOWN_ISSUES.md` (KT-001).
+
+Requisitos que NO cubre la plataforma (definir en el dashboard de Prisma Cloud, Environment → Variables): `ADMIN_TOKEN`, `RIOT_API_KEY`, `STEAM_API_KEY`, `DISCORD_*`, `FACEIT_API_KEY` — ver tabla abajo y `docs/ENVIRONMENT.md`.
 
 ## Requisitos
 
@@ -25,7 +36,7 @@ bun run start        # sirve en :3000 (NODE_ENV=production)
    - **WAF gestionado + Rate limiting** sobre `/api/*` (mitiga abuso de endpoints costosos).
    - Regla de caché: estáticos (`/_next/static/*`) cacheables; `/api/*` no cacheable.
 3. Health check del balanceador/monitor: `GET /api/health` → `200 {"status":"healthy"}` (no expone secretos; solo booleanos de configuración).
-4. Migraciones en el servidor: `bunx prisma migrate deploy` (nunca reset).
+4. Migraciones en el servidor: `prisma db migrate --db "$PROD_URL"` (replay-only; nunca reset).
 
 ## Opción B — Cloudflare Workers/Pages (edge)
 
