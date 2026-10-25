@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --text: #111827;
+    --text-sub: #6B7280;
+    --text-muted: #9CA3AF;
+    --bg: #FFFFFF;
+    --border: #E5E7EB;
+    --connector: #94A3B8;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root { width: fit-content; min-width: 1560px; margin: 0 auto; padding: 48px 44px; background: #FFFFFF; }
+
+  /* ─── Hero header ─── */
+  .hero-header {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border-radius: 16px; padding: 40px 44px; color: white; margin-bottom: 36px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .hero-badge {
+    display: inline-block; background: rgba(59,130,246,0.16);
+    color: #60A5FA; font-size: 12px; font-weight: 700;
+    padding: 4px 14px; border-radius: 20px; margin-bottom: 14px;
+    letter-spacing: 0.6px;
+  }
+  .hero-header h1 { font-size: 34px; font-weight: 800; margin-bottom: 10px; letter-spacing: 0.5px; }
+  .hero-header h1 span { color: #60A5FA; }
+  .hero-header p { font-size: 14.5px; color: #94A3B8; max-width: 760px; line-height: 1.6; }
+  .hero-meta { text-align: right; }
+  .hero-meta .repo {
+    font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; color: #CBD5E1;
+    background: rgba(148,163,184,0.12); border: 1px solid rgba(148,163,184,0.25);
+    padding: 8px 14px; border-radius: 8px; white-space: nowrap;
+  }
+  .hero-meta .ref {
+    margin-top: 12px; font-size: 12px; color: #64748B; line-height: 1.55; white-space: nowrap;
+  }
+
+  /* ─── Layer (phase) groups — Scheme B: neutral gray base + blue accent progression ─── */
+  .phase-group {
+    border-radius: 12px; padding: 20px 24px 22px;
+    background: #F8FAFC; border: 1px solid #E2E8F0;
+  }
+  .phase-title {
+    font-size: 17px; font-weight: 700; padding: 10px 16px;
+    border-radius: 8px; margin-bottom: 16px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .phase-title .layer-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+    opacity: 0.75; text-transform: uppercase;
+  }
+  .phase-title .layer-note { font-size: 12.5px; font-weight: 400; opacity: 0.7; margin-left: auto; }
+
+  .phase-1 .phase-title { background: #F8FAFC; color: #334155; border-left: 4px solid #94A3B8; }
+  .phase-1 { background: #FAFBFC; }
+  .phase-2 .phase-title { background: #F1F5F9; color: #334155; border-left: 4px solid #7B8FA3; }
+  .phase-2 { background: #F8FAFC; }
+  .phase-3 .phase-title { background: #E8EDF3; color: #2D4156; border-left: 4px solid #6B809A; }
+  .phase-3 { background: #F5F8FA; }
+  .phase-4 .phase-title { background: #E2E8F0; color: #283C52; border-left: 4px solid #5B7590; }
+  .phase-4 { background: #F3F6F9; }
+
+  /* ─── Node cards ─── */
+  .layer-nodes { display: grid; gap: 16px; }
+  .cols-5 { grid-template-columns: repeat(5, minmax(238px, 1fr)); }
+  .cols-4 { grid-template-columns: repeat(4, minmax(238px, 1fr)); }
+
+  .node {
+    background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 10px;
+    padding: 14px 16px; min-height: 78px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+  }
+  .node .node-title { font-size: 15px; font-weight: 650; color: #1F2937; line-height: 1.35; }
+  .node .node-desc { font-size: 12.5px; color: var(--text-sub); margin-top: 5px; line-height: 1.5; }
+
+  /* Node variants */
+  .node.ingest { background: #FFF7ED; border-color: #F59E0B; }
+  .node.ingest .node-title { color: #92400E; }
+  .node.core { background: #1E293B; border-color: #0F172A; }
+  .node.core .node-title { color: #FFFFFF; }
+  .node.core .node-desc { color: #CBD5E1; }
+
+  /* ─── Arrows between layers ─── */
+  .flow-arrow {
+    text-align: center; color: var(--connector); font-size: 22px;
+    margin: 6px 0; line-height: 1;
+  }
+  .flow-arrow .arrow-label {
+    display: inline-block; vertical-align: middle;
+    font-size: 12px; color: var(--text-sub); background: #F1F5F9;
+    border: 1px solid #E2E8F0; border-radius: 12px;
+    padding: 3px 12px; margin-left: 12px; font-weight: 500;
+  }
+
+  /* ─── Transversal band ─── */
+  .phase-transversal {
+    margin-top: 22px; background: #F8FAFC;
+    border: 2px dashed #94A3B8; border-radius: 12px; padding: 20px 24px 22px;
+  }
+  .phase-transversal .phase-title {
+    background: #EEF2F6; color: #334155; border-left: 4px solid #64748B;
+  }
+
+  /* ─── Footer: legend + stack ─── */
+  .footer-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 28px; gap: 24px;
+  }
+  .flow-legend {
+    display: flex; gap: 22px; padding: 12px 20px;
+    background: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #4B5563; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
+  .stack-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .stack-note .stack-label { font-size: 12.5px; font-weight: 600; color: #334155; margin-right: 4px; }
+  .chip {
+    font-size: 12px; font-weight: 600; color: #334155;
+    background: #EEF2F6; border: 1px solid #D8E0EA;
+    border-radius: 12px; padding: 3px 11px; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div id="root">
+
+  <!-- ═══ HERO ═══ -->
+  <div class="hero-header">
+    <div>
+      <div class="hero-badge">OPCIÓN 2 · DIAGRAMA DE ARQUITECTURA</div>
+      <h1>VANTS<span>NET</span></h1>
+      <p>Arquitectura de una red de estadísticas gaming:
+      APIs oficiales de cada juego, colectores con colas y caché, núcleo backend con API propia
+      y una capa de presentación multi-juego.</p>
+    </div>
+    <div class="hero-meta">
+      <div class="repo">github.com/feispla/VANTSNET</div>
+      <div class="ref">Flujo de datos: de arriba hacia abajo<br>Estadísticas multi-juego con una sola API</div>
+    </div>
+  </div>
+
+  <!-- ═══ CAPA 1: FUENTES DE DATOS ═══ -->
+  <div class="phase-group phase-1">
+    <div class="phase-title"><span class="layer-tag">Capa 1</span> Fuentes de datos
+      <span class="layer-note">APIs oficiales — solo fuentes autorizadas por los ToS de cada juego</span>
+    </div>
+    <div class="layer-nodes cols-5">
+      <div class="node">
+        <div class="node-title">Riot Games API</div>
+        <div class="node-desc">Valorant · LoL · TFT — OAuth 2.0 + API key de desarrollo/producción</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Bungie.net API</div>
+        <div class="node-desc">Destiny 2 — OAuth por usuario con refresco automático de token</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Steam Web API</div>
+        <div class="node-desc">CS2 · Dota 2 — Steam Web API Key, perfiles y partidas</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Epic Manifest API</div>
+        <div class="node-desc">Fortnite — manifiestos para detectar parches y metas</div>
+      </div>
+      <div class="node ingest">
+        <div class="node-title">Data Ingest</div>
+        <div class="node-desc">Servidores de juego envían POST JSON al final de cada partida</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">↓ <span class="arrow-label">consume APIs oficiales · respeta rate limits</span></div>
+
+  <!-- ═══ CAPA 2: INGESTA Y COLECTA ═══ -->
+  <div class="phase-group phase-2">
+    <div class="phase-title"><span class="layer-tag">Capa 2</span> Ingesta y colecta
+      <span class="layer-note">los "collectors" — donde VANTSNET hace el trabajo pesado</span>
+    </div>
+    <div class="layer-nodes cols-4">
+      <div class="node">
+        <div class="node-title">Workers de colecta</div>
+        <div class="node-desc">Colas de tareas asíncronas (Redis Queue / Horizon) — refrescan perfiles</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Rotación de proxies IPv6</div>
+        <div class="node-desc">Evita bloqueos por IP — miles de IPs salientes desde un /64 IPv6</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Caché de resultados</div>
+        <div class="node-desc">TTL ~5 min por consulta — reduce llamadas a las APIs oficiales</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Endpoint /api/ingest</div>
+        <div class="node-desc">Valida y normaliza el JSON de partidas que reportan los servidores</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">↓ <span class="arrow-label">partidas normalizadas + perfiles actualizados</span></div>
+
+  <!-- ═══ CAPA 3: NÚCLEO BACKEND ═══ -->
+  <div class="phase-group phase-3">
+    <div class="phase-title"><span class="layer-tag">Capa 3</span> Núcleo backend
+      <span class="layer-note">el corazón de VANTSNET — API propia + persistencia</span>
+    </div>
+    <div class="layer-nodes cols-4">
+      <div class="node core">
+        <div class="node-title">API REST propia</div>
+        <div class="node-desc">Autenticación por clave propia — VANTS-Api-Key en cada petición</div>
+      </div>
+      <div class="node">
+        <div class="node-title">PostgreSQL</div>
+        <div class="node-desc">players · matches · match_player_stats · leaderboards</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Redis</div>
+        <div class="node-desc">Caché de respuestas + colas de workers + locks</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Scheduler</div>
+        <div class="node-desc">Tareas programadas: reintentos, rankings nocturnos, limpieza</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">↓ <span class="arrow-label">sirve estadísticas vía API interna</span></div>
+
+  <!-- ═══ CAPA 4: PRESENTACIÓN ═══ -->
+  <div class="phase-group phase-4">
+    <div class="phase-title"><span class="layer-tag">Capa 4</span> Presentación
+      <span class="layer-note">un solo código base, un tema por juego (patrón vue-theme-loader)</span>
+    </div>
+    <div class="layer-nodes cols-4">
+      <div class="node">
+        <div class="node-title">Web multi-juego</div>
+        <div class="node-desc">valorant.vantsnet.gg · cs2.vantsnet.gg · fortnite.vantsnet.gg</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Portal de developers</div>
+        <div class="node-desc">developers.vantsnet.gg — docs de la API pública y claves</div>
+      </div>
+      <div class="node">
+        <div class="node-title">App móvil (Flutter)</div>
+        <div class="node-desc">iOS + Android — un solo código Dart para toda la red</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Bot de Discord</div>
+        <div class="node-desc">Comandos /stats — consulta perfiles desde el chat</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CAPA TRANSVERSAL: OPERACIÓN ═══ -->
+  <div class="phase-transversal">
+    <div class="phase-title"><span class="layer-tag">Transversal</span> Operación y escalado
+      <span class="layer-note">aplica a todas las capas anteriores</span>
+    </div>
+    <div class="layer-nodes cols-4">
+      <div class="node">
+        <div class="node-title">Monitoreo de errores</div>
+        <div class="node-desc">Sentry / Bugsnag — alertas de fallos en colecta y API</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Rate limiting</div>
+        <div class="node-desc">Límites por API-Key en la API pública contra abusos</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Modelo freemium</div>
+        <div class="node-desc">API gratis para proyectos no comerciales + Premium de usuario</div>
+      </div>
+      <div class="node">
+        <div class="node-title">Legal y ToS</div>
+        <div class="node-desc">Cumplir ToS de cada juego, atribución de datos, sin venta de datos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <div class="footer-row">
+    <div class="flow-legend">
+      <div class="legend-item"><div class="legend-dot" style="border-color:#6B809A;background:#FFFFFF;"></div>Capa del pipeline de datos</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:#F59E0B;background:#FFF7ED;"></div>Ingesta desde servidores de juego</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:#0F172A;background:#1E293B;"></div>Núcleo del sistema</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:#94A3B8;background:transparent;border-style:dashed;"></div>Capa transversal</div>
+    </div>
+    <div class="stack-note">
+      <span class="stack-label">Stack recomendado:</span>
+      <span class="chip">Laravel 11 + Vue</span>
+      <span class="chip">o Node.js + Next.js</span>
+      <span class="chip">PostgreSQL</span>
+      <span class="chip">Redis</span>
+      <span class="chip">Docker</span>
+      <span class="chip">Nginx</span>
+      <span class="chip">Flutter</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

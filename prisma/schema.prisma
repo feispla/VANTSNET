@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Capa 3 del blueprint VANTSNET: persistencia de jugadores, partidas y stats
+model Player {
+  id            String    @id @default(cuid())
+  game          String    @default("valorant")
+  puuid         String    @unique
+  gameName      String
+  tagLine       String
+  region        String
+  lastFetchedAt DateTime?
+  createdAt     DateTime  @default(now())
+  stats         MatchPlayerStat[]
+}
+
+model Match {
+  id           String   @id @default(cuid())
+  game         String   @default("valorant")
+  externalId   String   @unique
+  mapId        String
+  mapName      String
+  mode         String
+  modeLabel    String
+  startedAt    DateTime
+  durationMs   Int
+  roundsPlayed Int      @default(0)
+  teamsJson    String   @default("[]")
+  raw          String?
+  createdAt    DateTime @default(now())
+  players      MatchPlayerStat[]
+}
+
+model MatchPlayerStat {
+  id             String  @id @default(cuid())
+  matchId        String
+  match          Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  puuid          String
+  gameName       String
+  tagLine        String
+  teamId         String
+  agentId        String  @default("")
+  agentName      String  @default("")
+  kills          Int     @default(0)
+  deaths         Int     @default(0)
+  assists        Int     @default(0)
+  score          Int     @default(0)
+  scorePerRound  Float   @default(0)
+  roundsPlayed   Int     @default(0)
+  damageMade     Int     @default(0)
+  damageReceived Int     @default(0)
+  headshots      Int     @default(0)
+  bodyshots      Int     @default(0)
+  legshots       Int     @default(0)
+  won            Boolean @default(false)
+  player         Player? @relation(fields: [puuid], references: [puuid])
+
+  @@index([matchId])
+  @@index([puuid])
+}
