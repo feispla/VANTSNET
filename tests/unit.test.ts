@@ -1,5 +1,6 @@
 // Tests de unidad de la lógica crítica (sin red ni BD).
 // Ejecutar: bunx vitest run
+import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { buildState, verifyState, DiscordError } from '@/lib/discord';
 import { FaceitError } from '@/lib/faceit';
@@ -46,7 +47,6 @@ describe('Discord — state firmado (anti-CSRF)', () => {
     // Simula un state emitido hace 11 minutos modificando la expiración y firmando de nuevo
     const expiry = Date.now() - 11 * 60 * 1000;
     const payload = `${expiry}.${Buffer.from('nonce').toString('base64url')}`;
-    const { createHmac } = require('node:crypto') as typeof import('node:crypto');
     const sig = createHmac('sha256', SECRET).update(payload).digest('base64url');
     expect(() => verifyState(`${payload}.${sig}`, SECRET)).toThrowError(/expirado/i);
   });
