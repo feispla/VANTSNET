@@ -31,6 +31,18 @@ Registradas al cierre de la fase de completación autónoma (25/10/2026). Cada e
 
 **Siguiente acción.** Renombrar SOLO el servicio (p. ej. `vantsnet-app`) en una PR dedicada, con el preview como canario, actualizando `src/prisma/db.ts` y docs; comprobar en el log del preview el nombre nuevo de la var antes del merge. Impacto hasta entonces: solo la vista de topología.
 
+### KT-003 — 500 plano en todas las rutas API del preview: `DATABASE_URL` es el placeholder `"-"` (25/10/2026, RESUELTA)
+
+**Síntoma.** Con el preview ya desplegado (migración OK), las páginas servían (200, 404 reales) pero **todas** las rutas API devolvían `Internal Server Error` (500 plano, 21 bytes). Localmente no se reproducía (standalone + `COMPOSER_VANTSNET_DB_URL` real → 200 healthy).
+
+**Diagnóstico.** Ruta temporal `/api/debug-deploy` (import diferido del módulo de BD con try/catch, sin valores de env): en el runtime de la plataforma (`bun 1.4.4`), `DATABASE_URL` **existe pero vale `-`** — el composer la reclama con placeholder para reservarla de la plataforma (`claimDatabaseUrlKeys`, create-only con `"-"`). La cadena `DATABASE_URL ?? COMPOSER_VANTSNET_DB_URL` tomaba `-` (truthy) → `postgres({ url: "-" })` → `StructuredError: Postgres URL must be a valid URL` en la inicialización del módulo → crash de import → 500 en cada ruta que importa `db`. `COMPOSER_VANTSNET_DB_URL` sí contenía la URL real del dep.
+
+**Fix.** `resolveDbUrl()` toma la primera candidata con formato plausible de URL Postgres (`DATABASE_URL` → `COMPOSER_VANTSNET_DB_URL` → `COMPOSER_*_DB_URL`) y descarta placeholders; sin candidata válida queda `undefined` y el cliente se construye igual (pool lazy) para fallar degradado (503 en health), nunca con crash de arranque. `prisma.config.ts` aplica el mismo criterio.
+
+**Verificación.** Preview real tras el fix: `/api/health` → 200 `{"status":"healthy","checks":{"database":"ok"}}`; diagnóstico diferido → `dbModule: loaded`, `query: ok`.
+
+**Lección.** En Prisma Cloud, `DATABASE_URL`/`DATABASE_URL_POOLED` son variables reservadas con placeholder `-`: nunca confiar en la presencia de la variable, sino en el formato del valor.
+
 ## Bloqueadas por credenciales/autorización externa
 
 | # | Elemento | Impacto | Prioridad | Siguiente acción |

@@ -32,7 +32,7 @@ Reglas del pipeline:
 - **Redeploy (sin cambio de esquema):** el marker de la BD ya está en el hash destino → la etapa es un no-op seguro.
 - **Cambio de contrato:** autorar el paso antes de pushear — `bun run db:emit` y `bun run db:plan -- --name <cambio>` — y commitear `migrations/` junto con el contrato. Cada PR obtiene un stage de preview con su propia BD, así que la migración se valida ahí antes del merge.
 
-La URL de conexión en runtime del servicio no es `DATABASE_URL`: Prisma Cloud inyecta el dep `db` como `COMPOSER_VANTSNET_DB_URL` (el boot del servicio la escribe en `process.env`). `src/prisma/db.ts` resuelve la cadena `DATABASE_URL ?? COMPOSER_VANTSNET_DB_URL ?? COMPOSER_*_DB_URL`, así que local y plataforma funcionan con el mismo código.
+La URL de conexión en runtime del servicio no es `DATABASE_URL`: Prisma Cloud inyecta el dep `db` como `COMPOSER_VANTSNET_DB_URL` (el boot del servicio la escribe en `process.env`), y `DATABASE_URL` existe pero vale `-` (placeholder con el que el composer la reserva). Por eso `src/prisma/db.ts` no usa `??` sino que toma la primera candidata con formato plausible de URL Postgres (`DATABASE_URL` → `COMPOSER_VANTSNET_DB_URL` → `COMPOSER_*_DB_URL`): local y plataforma funcionan con el mismo código.
 
 ## Modelos
 
