@@ -36,7 +36,7 @@ Este repo ya incluye un **prototipo funcional de la red** construido con la ruta
 ```bash
 bun install            # o npm install
 cp .env.example .env   # opcional: añade tus claves (Riot/Steam/admin/Discord/FACEIT)
-bunx prisma db push    # o npx prisma db push
+bun run db:update      # aplica el contrato (Prisma ORM 8) a la BD
 bun run dev            # o npm run dev → http://localhost:3000
 
 bun run lint        # ESLint
@@ -49,7 +49,7 @@ Variables de entorno (referencia completa en [`docs/ENVIRONMENT.md`](docs/ENVIRO
 
 | Variable | Obligatoria | Descripción |
 |----------|-------------|-------------|
-| `DATABASE_URL` | Sí | SQLite en desarrollo (`file:../db/custom.db`); PostgreSQL/Neon en producción ([`docs/DATABASE.md`](docs/DATABASE.md)) |
+| `DATABASE_URL` | Sí | PostgreSQL (Prisma Postgres, Neon o local); la plataforma Prisma la aprovisiona al desplegar ([`docs/DATABASE.md`](docs/DATABASE.md)) |
 | `RIOT_API_KEY` | No | Clave de Riot: habilita la verificación real de Riot IDs. Sin ella, solo el modo demo |
 | `STEAM_API_KEY` | No | Clave gratuita de Steam Web API: habilita `/api/steam/resolve` |
 | `ADMIN_TOKEN` | Para admin | Mutaciones de torneos/equipos (header `X-Admin-Token`); sin él, `503` honesto |
@@ -90,7 +90,7 @@ El prototipo ya aplica el patrón central del blueprint: **caché en base de dat
 
 ## Stack tecnológico
 
-- **Prototipo (este repo)**: Next.js 16 + TypeScript + Tailwind 4 + Prisma/SQLite — la "ruta moderna" del stack
+- **Prototipo (este repo)**: Next.js 16 + TypeScript + Tailwind 4 + Prisma ORM 8/PostgreSQL — la "ruta moderna" del stack
 - **Backend producción (planificado)**: Laravel 11 + Vue (ruta clásica) o Node.js + Next.js
 - **Base de datos**: PostgreSQL (jugadores, partidas, estadísticas) + Redis (caché y colas)
 - **Infraestructura**: Docker + Nginx
@@ -104,7 +104,8 @@ VANTSNET/
 │   ├── app/                 # UI (buscador/perfil/partida) + API routes (valorant, steam)
 │   ├── components/          # Vistas de la red de estadísticas + componentes UI
 │   └── lib/                 # Clientes de APIs oficiales (Riot, Steam) + datos demo
-├── prisma/                  # Esquema: Player, Match, MatchPlayerStat (SQLite dev → PostgreSQL prod)
+├── src/prisma/              # Contrato Prisma 8: 11 modelos (Player, Match, torneos...)
+├── prisma.config.ts         # Config del ORM (contrato + conexión)
 ├── docs/
 │   ├── ARQUITECTURA.md      # Arquitectura completa del blueprint + diagrama Mermaid + SQL
 │   ├── ROADMAP.md           # Plan de construcción en 5 fases con criterios de aceptación

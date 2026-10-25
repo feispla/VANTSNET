@@ -88,3 +88,26 @@ Listado priorizado con siguiente acción exacta en [`KNOWN_ISSUES.md`](KNOWN_ISS
 ## J. Valoración final honesta
 
 **Ready for review + Locally validated + CI validated** (en la rama del PR): la implementación está completa, verificada localmente y los checks remotos reales (CI, CodeQL) pasan. **No** se reclama "Deployment verified" ni "producción lista": no hay despliegue, credenciales de integraciones ni fusión a `main` — que corresponden a decisiones humanas.
+
+---
+
+## Actualización 2026-10-26 — Migración a Prisma ORM 8 (para la plataforma Prisma)
+
+La plataforma de despliegue de Prisma exige repositorios en **Prisma 8**; el repo estaba en Prisma 6.11.1 con SQLite. Migración completa ejecutada y verificada (rama `feat/prisma-8`):
+
+| Elemento | Antes | Ahora |
+|---|---|---|
+| CLI | `prisma@^6.11.1` | `prisma@8.0.0-rc.27` |
+| Runtime | `@prisma/client@^6.11.1` (Rust engine) | `@prisma/orm-postgres@8.0.0-rc.20` (driver adapter, sin engine) |
+| Esquema | `prisma/schema.prisma` + `prisma generate` | `src/prisma/contract.prisma` + `prisma contract emit` (artefactos committeados) |
+| Config | datasource en el schema | `prisma.config.ts` (raíz) |
+| BD | SQLite (`file:`) | PostgreSQL (Prisma Postgres / Neon / local) |
+| API de datos | `db.<modelo>.findMany(...)` | `db.orm.public.<Modelo>.where(...).all()` (14 archivos reescritos) |
+
+**Verificación real (no simulada):**
+- `prisma contract emit`: contrato válido, artefactos generados sin errores.
+- Contra una **Prisma Postgres real** (temporal vía `create-db`): `db update` creó las 11 tablas + FKs + índices y un smoke test de los patrones de la aplicación (upserts idempotentes, transacciones, `createAll`, `whereUnique`, `include` con refinamiento `count`, `groupBy().aggregate()`, `like`, `in`, `update`, `delete`, violación única `23505`, normalización de fechas) pasó **12/12**.
+- CI local completo: typecheck ✅, ESLint ✅, 14/14 tests ✅, `next build` ✅.
+- Cambio de comportamiento conocido: las fechas son texto del contrato (`TimestamptzString`) y se normalizan a ISO-8601 UTC en la frontera de la API (`toIsoTimestamp`), igual que las entregaba Prisma 6.
+
+**Estado de la plataforma Prisma**: pendiente de que el repo esté en `main` con Prisma 8; entonces el flujo de 3 pasos de la plataforma (PR de configuración → merge → primer despliegue) puede completarse. Despliegue **no ejecutado** (no autorizado).

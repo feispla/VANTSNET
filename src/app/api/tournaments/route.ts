@@ -1,7 +1,7 @@
 // GET  /api/tournaments — lista pública (filtro opcional ?status=)
 // POST /api/tournaments — crear torneo (admin)
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isUniqueViolation, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import {
@@ -21,14 +21,15 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
-  const tournaments = await db.tournament.findMany({
-    where: status ? { status } : undefined,
-    include: { _count: { select: { registrations: true, matches: true } } },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-  });
+  const base = db.orm.public.Tournament
+    .include('registrations', (r) => r.count())
+    .include('matches', (m) => m.count());
+  const rows = await (status ? base.where({ status }) : base)
+    .orderBy((t) => t.createdAt.desc())
+    .limit(100)
+    .all();
   return NextResponse.json({
-    tournaments: tournaments.map((t) => ({
+    tournaments: rows.map((t) => ({
       id: t.id,
       slug: t.slug,
       name: t.name,
@@ -37,11 +38,11 @@ export async function GET(req: NextRequest) {
       status: t.status,
       maxTeams: t.maxTeams,
       description: t.description,
-      startsAt: t.startsAt,
-      registrationDeadline: t.registrationDeadline,
-      registeredTeams: t._count.registrations,
-      matches: t._count.matches,
-      createdAt: t.createdAt,
+      startsAt: toIsoTimestamp(t.startsAt),
+      registrationDeadline: toIsoTimestamp(t.registrationDeadline),
+      registeredTeams: t.registrations,
+      matches: t.matches,
+      createdAt: toIsoTimestamp(t.createdAt),
     })),
   });
 }
@@ -64,10 +65,10 @@ export async function POST(req: NextRequest) {
 
   // Slug único: base derivada del nombre + sufijo incremental si colisiona
   let slug = slugify(data.name);
-  const existing = await db.tournament.findMany({
-    where: { slug: { startsWith: slug } },
-    select: { slug: true },
-  });
+  const existing = await db.orm.public.Tournament
+    .select('slug')
+    .where((t) => t.slug.like(`${slug}%`))
+    .all();
   if (existing.some((t) => t.slug === slug)) {
     let i = 2;
     while (existing.some((t) => t.slug === `${slug}-${i}`)) i++;
@@ -75,18 +76,16 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const tournament = await db.tournament.create({
-      data: {
-        slug,
-        name: data.name,
-        game: data.game,
-        format: data.format,
-        maxTeams: data.maxTeams,
-        description: data.description,
-        rules: data.rules,
-        startsAt: data.startsAt,
-        registrationDeadline: data.registrationDeadline,
-      },
+    const tournament = await db.orm.public.Tournament.create({
+      slug,
+      name: data.name,
+      game: data.game,
+      format: data.format,
+      maxTeams: data.maxTeams,
+      description: data.description ?? null,
+      rules: data.rules ?? null,
+      startsAt: data.startsAt ?? null,
+      registrationDeadline: data.registrationDeadline ?? null,
     });
     await writeAudit({
       actor: 'admin-token',
@@ -97,8 +96,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ tournament }, { status: 201 });
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'P2002') {
+    if (isUniqueViolation(err)) {
       return NextResponse.json({ error: 'El slug del torneo ya existe.', code: 'DUPLICATE_SLUG' }, { status: 409 });
     }
     console.error('tournament-create', err);

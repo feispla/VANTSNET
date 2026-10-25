@@ -23,6 +23,13 @@ export const teamCreateInput = z.object({
 
 export const teamMemberCreateInput = memberInput;
 
+// Las fechas del contrato (TimestamptzString) se escriben como texto ISO-8601;
+// z.coerce.date() valida que el valor sea una fecha real y se normaliza a ISO.
+const isoDate = () =>
+  z.coerce
+    .date()
+    .transform((d) => d.toISOString());
+
 export const tournamentCreateInput = z.object({
   name: z.string().trim().min(3).max(80),
   game: z.string().trim().min(2).max(32).default('valorant'),
@@ -30,8 +37,8 @@ export const tournamentCreateInput = z.object({
   maxTeams: z.number().int().min(2).max(128).default(8),
   description: z.string().trim().max(1000).optional(),
   rules: z.string().trim().max(5000).optional(),
-  startsAt: z.coerce.date().optional(),
-  registrationDeadline: z.coerce.date().optional(),
+  startsAt: isoDate().optional(),
+  registrationDeadline: isoDate().optional(),
 });
 
 export const tournamentUpdateInput = z.object({
@@ -39,8 +46,8 @@ export const tournamentUpdateInput = z.object({
   status: z.enum(TOURNAMENT_STATUSES).optional(),
   description: z.string().trim().max(1000).optional(),
   rules: z.string().trim().max(5000).optional(),
-  startsAt: z.coerce.date().nullable().optional(),
-  registrationDeadline: z.coerce.date().nullable().optional(),
+  startsAt: isoDate().nullable().optional(),
+  registrationDeadline: isoDate().nullable().optional(),
 });
 
 export const registrationCreateInput = z.object({
@@ -58,7 +65,7 @@ export const tournamentMatchCreateInput = z.object({
   slot: z.string().trim().max(16).optional(),
   homeTeamId: z.string().trim().min(1).nullable().optional(),
   awayTeamId: z.string().trim().min(1).nullable().optional(),
-  playedAt: z.coerce.date().optional(),
+  playedAt: isoDate().optional(),
 });
 
 export const tournamentMatchUpdateInput = z

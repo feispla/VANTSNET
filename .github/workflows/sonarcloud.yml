@@ -38,7 +38,7 @@ jobs:
 
       - name: Build (necesario para analizar todo el código)
         if: steps.check.outputs.skip == 'false'
-        run: bun install --frozen-lockfile && bunx prisma generate && bun run build
+        run: bun install --frozen-lockfile && bun run build
         env:
           DATABASE_URL: file:./ci.db
 

@@ -1,6 +1,6 @@
 // POST /api/teams/[teamId]/members — añadir miembro (admin)
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isUniqueViolation, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import { firstIssueMessage, teamMemberCreateInput } from '@/lib/validators';
@@ -15,7 +15,7 @@ export async function POST(
   if (denied) return denied;
 
   const { teamId } = await params;
-  const team = await db.team.findUnique({ where: { id: teamId }, select: { id: true, name: true } });
+  const team = await db.orm.public.Team.whereUnique({ id: teamId }).select('id', 'name').first();
   if (!team) {
     return NextResponse.json({ error: 'Equipo no encontrado.' }, { status: 404 });
   }
@@ -32,8 +32,10 @@ export async function POST(
   }
 
   try {
-    const member = await db.teamMember.create({
-      data: { teamId: team.id, nickname: parsed.data.nickname, role: parsed.data.role },
+    const member = await db.orm.public.TeamMember.create({
+      teamId: team.id,
+      nickname: parsed.data.nickname,
+      role: parsed.data.role,
     });
     await writeAudit({
       actor: 'admin-token',
@@ -42,10 +44,12 @@ export async function POST(
       entityId: team.id,
       detail: { nickname: member.nickname, role: member.role },
     });
-    return NextResponse.json({ member }, { status: 201 });
+    return NextResponse.json(
+      { member: { ...member, joinedAt: toIsoTimestamp(member.joinedAt) } },
+      { status: 201 }
+    );
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'P2002') {
+    if (isUniqueViolation(err)) {
       return NextResponse.json(
         { error: 'Ese apodo ya está en la plantilla del equipo.', code: 'DUPLICATE_MEMBER' },
         { status: 409 }

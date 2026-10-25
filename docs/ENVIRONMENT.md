@@ -4,7 +4,7 @@ Ejemplo con placeholders: `.env.example` (raíz del repo). Copiar a `.env` (excl
 
 | Variable | Obligatoria | Pública/secreta | Dónde se usa | Efecto si falta |
 |----------|-------------|-----------------|--------------|-----------------|
-| `DATABASE_URL` | Sí | pública (contiene credenciales → tratar como secreta) | `src/lib/db.ts`, Prisma | La app no arranca (Prisma falla) |
+| `DATABASE_URL` (PostgreSQL: Prisma Postgres / Neon / local) | Sí | pública (contiene credenciales → tratar como secreta) | `src/prisma/db.ts`, Prisma ORM 8 | La app no arranca (Prisma falla) |
 | `ADMIN_TOKEN` | Para mutaciones admin | **secreta** | `src/lib/admin.ts` (header `X-Admin-Token`) | Mutaciones admin → `503 ADMIN_NOT_CONFIGURED` (honesto, nunca abierto) |
 | `RIOT_API_KEY` | No | **secreta** | `src/lib/valorant/riot.ts`, header `x-riot-key` aceptado | Solo modo demo; cuenta real → 400 `NO_KEY` |
 | `STEAM_API_KEY` | No | **secreta** | `src/lib/steam/steam.ts` | `/api/steam/resolve` → error tipado `NO_KEY` |
