@@ -12,10 +12,24 @@ import contractJson from "./contract.json" with { type: "json" };
 
 export const contract = contractFromJson<Contract>(contractJson);
 
+// Resolución de la URL de conexión:
+// 1. DATABASE_URL — desarrollo local y CI (archivo .env, secret de Actions).
+// 2. COMPOSER_VANTSNET_DB_URL — Prisma Cloud: el dep `db` de service.mjs se
+//    inyecta en runtime con ese nombre (convención COMPOSER_<app>_<dep>_URL);
+//    el `stash()` del boot del servicio lo escribe en process.env antes de
+//    levantar el servidor Next.js.
+// 3. Respaldo genérico COMPOSER_*_DB_URL — inmune a renombres del servicio.
+// En ningún caso se lanza aquí: el pool conecta de forma lazy (en la primera
+// query), así que `next build` funciona sin ninguna URL definida.
+const resolveDbUrl = (): string | undefined =>
+  process.env.DATABASE_URL ??
+  process.env.COMPOSER_VANTSNET_DB_URL ??
+  Object.entries(process.env).find(([key]) => /^COMPOSER_.*_DB_URL$/.test(key))?.[1];
+
 const createDb = () =>
   postgres({
     contract,
-    url: process.env.DATABASE_URL!,
+    url: resolveDbUrl(),
   });
 
 type Db = ReturnType<typeof createDb>;

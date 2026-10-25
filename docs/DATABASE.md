@@ -22,6 +22,18 @@
 
 Ciclo normal de un cambio: **editar contrato → `db:emit` → `db:update` (dev) → commit del contrato + `contract.json` + `contract.d.ts` + `migrations/`**. Para producción versionada, usa `db:plan` + `db:migrate` en lugar de `db:update`.
 
+## Migraciones en Prisma Cloud (despliegue)
+
+El despliegue de Prisma Cloud (`module.mjs` + `service.mjs`) es **replay-only**: aplica las migraciones versionadas commiteadas en `migrations/`, pero **nunca crea el esquema por sí mismo**. Por eso el repo incluye el baseline `migrations/app/20261025T2057_baseline/` (11 tablas + constraints + índices, 44 operaciones), derivado del ref `db` del contrato.
+
+Reglas del pipeline:
+
+- **Primer deploy (BD nueva):** la etapa `database-migrate` conecta a la BD recién creada y aplica el camino escrito desde vacío hasta el ref destino (`31103b78…`). Sin migraciones commiteadas el deploy falla con `OrmMigrationError`.
+- **Redeploy (sin cambio de esquema):** el marker de la BD ya está en el hash destino → la etapa es un no-op seguro.
+- **Cambio de contrato:** autorar el paso antes de pushear — `bun run db:emit` y `bun run db:plan -- --name <cambio>` — y commitear `migrations/` junto con el contrato. Cada PR obtiene un stage de preview con su propia BD, así que la migración se valida ahí antes del merge.
+
+La URL de conexión en runtime del servicio no es `DATABASE_URL`: Prisma Cloud inyecta el dep `db` como `COMPOSER_VANTSNET_DB_URL` (el boot del servicio la escribe en `process.env`). `src/prisma/db.ts` resuelve la cadena `DATABASE_URL ?? COMPOSER_VANTSNET_DB_URL ?? COMPOSER_*_DB_URL`, así que local y plataforma funcionan con el mismo código.
+
 ## Modelos
 
 ### Capa de estadísticas (preexistente)
