@@ -4,9 +4,10 @@ import { RiotError, fetchMatchReal, isRiotRegion } from '@/lib/valorant/riot';
 import { demoMatchDetail } from '@/lib/valorant/demo-data';
 import type { MatchDetailResponse, MatchTeam } from '@/lib/valorant/types';
 
-const roundsFromTeams = (teams: { roundsWon: number; roundsLost: number }[]) => {
-  const total = teams[0]?.roundsWon && teams[0]?.roundsLost ? teams[0].roundsWon + teams[0].roundsLost : 0;
-  return total;
+const roundsFromTeams = (teams: { roundsWon: number; roundsPlayed: number }[]) => {
+  // En el payload de Riot, roundsPlayed por equipo = roundsWon + roundsLost;
+  // se toma el máximo por seguridad con prórrogas (OT).
+  return teams.reduce((max, t) => Math.max(max, t.roundsPlayed || 0), 0);
 };
 
 export async function GET(
@@ -90,7 +91,13 @@ export async function GET(
     return NextResponse.json(detail);
   } catch (err) {
     if (err instanceof RiotError) {
-      const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'RATE_LIMIT' ? 429 : err.code === 'INVALID_KEY' ? 403 : 502;
+      const statusMap: Record<string, number> = {
+        NOT_FOUND: 404,
+        RATE_LIMIT: 429,
+        INVALID_KEY: 403,
+        FORBIDDEN_PRODUCT: 403,
+      };
+      const status = statusMap[err.code] ?? 502;
       return NextResponse.json({ error: err.message, code: err.code }, { status });
     }
     console.error('match error', err);

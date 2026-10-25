@@ -255,7 +255,7 @@ export async function buildProfile(
   });
 
   const agg: ProfileAggregate = {
-    matches: stats.length, wins: 0, kills: 0, deaths: 0, assists: 0,
+    matches: stats.length, wins: 0, winrate: 0, kills: 0, deaths: 0, assists: 0,
     kd: 0, adr: 0, acs: 0, hsPct: 0,
   };
   const agentMap = new Map<string, AgentSummary & { _d: number; _h: number; _s: number }>();

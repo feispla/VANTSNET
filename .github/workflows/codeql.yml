@@ -9,25 +9,23 @@ on:
     # Escaneo semanal aunque no haya commits (lunes 05:30 UTC)
     - cron: '30 5 * * 1'
 
+permissions:
+  security-events: write
+  contents: read
+
 jobs:
   analyze:
     name: Analyze (javascript-typescript)
     runs-on: ubuntu-latest
-    permissions:
-      # Necesario para publicar resultados en Security -> Code scanning
-      security-events: write
-      contents: read
-
+    timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Inicializar CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-          # Paquete ampliado de consultas de seguridad (más cobertura
-          # que el paquete por defecto; alertas en Security -> Code scanning)
+          # Paquete ampliado de consultas de seguridad
           queries: security-extended
 
       - name: Autobuild

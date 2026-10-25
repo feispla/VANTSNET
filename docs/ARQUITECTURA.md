@@ -135,3 +135,46 @@ La idea que hace escalables a estas plataformas es **un solo código base con un
 - **Rate limiting** en la API pública por API-Key para proteger la infraestructura de abusos.
 - **Modelo freemium**: API gratuita para proyectos no comerciales + suscripción Premium con ventajas de producto, nunca venta de datos.
 - **Legal**: atribución visible de las fuentes ("Datos de Riot Games"), respeto de los ToS de cada editor y opción de borrado de perfil a petición del jugador.
+
+## Arquitectura implementada (prototipo, fase de completación)
+
+Esta sección describe lo que **existe y funciona** en el código actual; todo lo anterior es el blueprint hacia el que evoluciona.
+
+### Mapa de módulos
+
+```
+src/
+├── app/
+│   ├── page.tsx                     # SPA raíz (buscador / perfil / partida / competitivo)
+│   ├── layout.tsx                   # Shell + metadatos
+│   └── api/
+│       ├── health/                  # GET  estado del servicio (booleanos, sin secretos)
+│       ├── valorant/                # profile, match/[matchId] (demo + ruta real Riot)
+│       ├── steam/resolve/           # perfil Steam por SteamID64/vanity
+│       ├── faceit/player/           # FACEIT Data API v4 (503 honesto sin clave)
+│       ├── auth/discord/            # start / callback / status / link (OAuth identify)
+│       ├── teams/                   # GET público, POST admin; members/[memberId] admin
+│       ├── tournaments/             # GET/POST + [id] GET/PATCH + registrations + matches
+│       └── admin/audit/             # GET últimos registros de auditoría
+├── components/vantsnet/             # Vistas de la SPA (search, profile, match, hub, tournament-detail)
+├── lib/
+│   ├── valorant/riot.ts             # Cliente Riot tipado + agregación (capa 3 del blueprint)
+│   ├── valorant/demo-data.ts        # Fixture determinista (solo demo, claramente marcado)
+│   ├── steam/steam.ts               # Cliente Steam Web API
+│   ├── discord.ts                   # OAuth2: state HMAC, exchange, users/@me
+│   ├── faceit.ts                    # Cliente FACEIT v4 con errores tipados
+│   ├── admin.ts                     # Guard X-Admin-Token (timing-safe)
+│   ├── audit.ts                     # Escritura de AuditLog
+│   ├── validators.ts                # Schemas zod de la frontera API
+│   └── db.ts                        # Prisma client singleton
+└── tests/unit.test.ts               # Vitest: lógica crítica sin red/BD
+```
+
+### Decisiones estructurales
+
+1. **Una ruta visual (`/`) con vistas en Zustand** — coherente con el despliegue SPA y el gateway; el hub «Competitivo» es una vista más, no un árbol de rutas paralelo.
+2. **Validación en frontera** — todo body de mutación pasa por zod antes de tocar la BD; los errores del proveedor se traducen a códigos estables (`NOT_CONFIGURED`, `DUPLICATE_REGISTRATION`, `FORBIDDEN_PRODUCT`…).
+3. **Estados honestos por diseño** — una integración sin credenciales responde `503` con guía; los datos demo viven solo en `demo-data.ts` y se marcan como demo en la respuesta (`demo: true`) y en la UI.
+4. **Fuentes de verdad separadas** — los torneos/equipos son registros propios de VANTSNET; los datos de Riot/Steam/FACEIT se importan y se referencian (`TournamentMatch.externalMatchRef`), nunca se mezclan.
+5. **Idempotencia** — `ProviderIdentity` y `TournamentRegistration` tienen constraints únicos; la sincronización repetida no crea duplicados.
+6. **Auditoría de mutaciones** — toda acción admin registra actor/acción/entidad/detalle en `AuditLog`.

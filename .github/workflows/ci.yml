@@ -6,29 +6,52 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  quality:
+    name: Lint · Typecheck · Tests · Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: latest
 
-      - name: Instalar dependencias
-        run: npm ci
+      - name: Instalar dependencias (lockfile congelado)
+        run: bun install --frozen-lockfile
 
-      - name: Generar cliente Prisma
-        run: npx prisma generate
+      - name: Preparar base de datos de CI (SQLite)
+        run: bunx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: file:./ci.db
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
-      - name: Build
-        run: npm run build
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Tests
+        run: bun run test
         env:
-          # Prisma solo necesita una URL válida para generar/compilar;
-          # el prototipo usa SQLite, no requiere servicios externos.
           DATABASE_URL: file:./ci.db
+
+      - name: Build de producción
+        run: bun run build
+        env:
+          DATABASE_URL: file:./ci.db
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "### Resultado CI" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Lint: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

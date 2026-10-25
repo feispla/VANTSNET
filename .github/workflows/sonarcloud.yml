@@ -6,9 +6,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
 jobs:
   sonar:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -16,15 +20,30 @@ jobs:
           # para calcular con precisión el "código nuevo" del Quality Gate
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Comprobar si SonarCloud está configurado
+        id: check
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::notice::SONAR_TOKEN no configurado; análisis omitido (añade el secret para activarlo)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Build (necesario para que el análisis incluya todo el código)
-        run: npm ci && npx prisma generate && npm run build
+      - name: Instalar Bun
+        if: steps.check.outputs.skip == 'false'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build (necesario para analizar todo el código)
+        if: steps.check.outputs.skip == 'false'
+        run: bun install --frozen-lockfile && bunx prisma generate && bun run build
+        env:
+          DATABASE_URL: file:./ci.db
 
       - name: Análisis SonarCloud
+        if: steps.check.outputs.skip == 'false'
         uses: SonarSource/sonarqube-scan-action@v4
         env:
-          # Secret del repo: Settings -> Secrets and variables -> Actions
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

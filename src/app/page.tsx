@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { AlertTriangle, Github, KeyRound, Loader2 } from 'lucide-react';
+import { AlertTriangle, Github, Loader2, Trophy } from 'lucide-react';
 import { SearchView } from '@/components/vantsnet/search-view';
 import { ProfileView } from '@/components/vantsnet/profile-view';
 import { MatchView } from '@/components/vantsnet/match-view';
+import { HubView } from '@/components/vantsnet/hub-view';
 import { useVantsnet } from '@/lib/store';
 
 export default function Home() {
@@ -21,6 +22,26 @@ export default function Home() {
     loadApiKey();
   }, [loadApiKey]);
 
+  // Resultado del enlace Discord (?auth=linked|error tras el callback OAuth)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const auth = params.get('auth');
+    if (!auth) return;
+    if (auth === 'linked') {
+      useVantsnet.setState({ error: null });
+    } else if (auth === 'error') {
+      const reason = params.get('reason');
+      useVantsnet.setState({
+        error:
+          reason === 'discord-no-configurado'
+            ? 'El enlace con Discord no está disponible: faltan las credenciales OAuth en el servidor (docs/INTEGRATIONS.md).'
+            : `El enlace con Discord no se completó${reason ? ` (${reason.replaceAll('-', ' ')})` : ''}. Inténtalo de nuevo.`,
+      });
+    }
+    // Limpia los parámetros de la URL sin recargar (no contamina compartidos)
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col bg-[#0B1120] text-slate-100">
       {/* Cabecera */}
@@ -36,6 +57,12 @@ export default function Home() {
             </span>
           </button>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => useVantsnet.getState().goHub()}
+              className="flex items-center gap-1.5 rounded-full border border-[#FF4655]/40 bg-[#FF4655]/10 px-3 py-1 text-xs font-bold text-[#FF4655] transition-colors hover:bg-[#FF4655]/20"
+            >
+              <Trophy className="h-3.5 w-3.5" /> Competitivo
+            </button>
             <a
               href="https://github.com/feispla/VANTSNET"
               target="_blank"
@@ -51,6 +78,7 @@ export default function Home() {
 
       <main className="flex flex-1 flex-col">
         {view === 'home' && <SearchView />}
+        {view === 'hub' && <HubView />}
         {view === 'profile' && (
           <ProfileView profile={profile} loading={loading} />
         )}
