@@ -18,9 +18,18 @@ Registradas al cierre de la fase de completación autónoma (25/10/2026). Cada e
 - Baseline escrito y commiteado: `migrations/app/20261025T2057_baseline/` (44 operaciones, 11 tablas), generado con `prisma migration plan --name init`; `prisma migration check` ✔.
 - Validación end-to-end local contra dos Prisma Postgres temporales: réplica exacta de la etapa `database-migrate` (resolución de ref + `client.migrate` con `refHash`) aplicó 1 migración (44 ops) en BD fresca y quedó en no-op en BD ya migrada; `db verify` → «marker and schema match contract».
 - Runtime corregido: el servicio recibe la URL como `COMPOSER_VANTSNET_DB_URL` (no `DATABASE_URL`); `src/prisma/db.ts` ahora resuelve `DATABASE_URL ?? COMPOSER_VANTSNET_DB_URL ?? COMPOSER_*_DB_URL`. Verificado arrancando el standalone solo con la var COMPOSER: `/api/health` → `database: ok`.
-- Aviso «Duplicate node logicalId: 'vantsnet'» corregido renombrando el módulo (`module.mjs`) a `vantsnet-stack` (el nombre del servicio, que es el que genera los env vars, no cambia).
 
 **Lección.** Cualquier cambio de contrato debe commitearse con su migración (`db:emit` + `db:plan --name <cambio>` + commit de `migrations/`); el preview del PR valida la migración en BD propia antes del merge.
+
+### KT-002 — Aviso «Duplicate node logicalId: 'vantsnet'» al registrar topología (ABIERTA, cosmética)
+
+**Síntoma.** En cada deploy, la CLI avisa `Prisma Cloud refused to record this deploy's application topology (HTTP 422): Duplicate node logicalId: 'vantsnet'` y sigue con el deploy. La vista de topología de la app en la Consola queda vacía; el despliegue en sí no se ve afectado.
+
+**Causa.** El PR #13 (generado por la plataforma) puso el MISMO nombre en el módulo (`module("vantsnet")`) y en el servicio (`compute({ name: "vantsnet" })`); el grafo reportado lleva dos nodos con ese logicalId. Los ejemplos oficiales usan nombres distintos (p. ej. módulo `my-app`, servicio `app`).
+
+**Por qué no se arregla en esta PR.** Ambos nombres son identidad: el del módulo resuelve el container en la Management API (renombrarlo produce `DEPLOY.CONTAINER_FAILED resource-not-found` — comprobado en el run 40235193367 del PR #14), y el del servicio determina los env vars (`COMPOSER_VANTSNET_*`). Un rename seguro exige migrar estado de deploy en la plataforma y actualizar las referencias a los env vars.
+
+**Siguiente acción.** Renombrar SOLO el servicio (p. ej. `vantsnet-app`) en una PR dedicada, con el preview como canario, actualizando `src/prisma/db.ts` y docs; comprobar en el log del preview el nombre nuevo de la var antes del merge. Impacto hasta entonces: solo la vista de topología.
 
 ## Bloqueadas por credenciales/autorización externa
 
