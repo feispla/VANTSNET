@@ -1,0 +1,208 @@
+// use prisma-8
+// ─────────────────────────────────────────────────────────────────────────────
+// Contrato VANTSNET (Prisma ORM 8) — migrado desde Prisma 6 (schema.prisma).
+//
+// Cambios de la migración (ver docs/DATABASE.md):
+//  - "schema" pasa a llamarse "contrato" y vive en src/prisma/contract.prisma.
+//  - Sin bloques generator/datasource: la conexión vive en prisma.config.ts.
+//  - DateTime -> TimestamptzString (los valores se leen/escriben como texto
+//    ISO; evita depender de Temporal en Node 22/24).
+//  - @default(cuid()) -> @onCreate(cuid(2)); @updatedAt -> @onCreate(now())
+//    @onUpdate(now()).
+//  - MatchPlayerStat.player pasa a relación requerida (la v8 exige igualar
+//    la nulidad del campo FK: puuid es NOT NULL).
+// ─────────────────────────────────────────────────────────────────────────────
+
+namespace public {
+  // ── Capa 3 del blueprint VANTSNET: jugadores, partidas y stats ────────────
+
+  model Player {
+    id            String            @id @onCreate(cuid(2))
+    game          String            @default("valorant")
+    puuid         String            @unique
+    gameName      String
+    tagLine       String
+    region        String
+    lastFetchedAt TimestamptzString?
+    createdAt     TimestamptzString @default(now())
+    stats         MatchPlayerStat[]
+  }
+
+  model Match {
+    id           String            @id @onCreate(cuid(2))
+    game         String            @default("valorant")
+    externalId   String            @unique
+    mapId        String
+    mapName      String
+    mode         String
+    modeLabel    String
+    startedAt    TimestamptzString
+    durationMs   Int
+    roundsPlayed Int               @default(0)
+    teamsJson    String            @default("[]")
+    raw          String?
+    createdAt    TimestamptzString @default(now())
+    players      MatchPlayerStat[]
+  }
+
+  model MatchPlayerStat {
+    id             String  @id @onCreate(cuid(2))
+    matchId        String
+    match          Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+    puuid          String
+    player         Player  @relation(fields: [puuid], references: [puuid])
+    gameName       String
+    tagLine        String
+    teamId         String
+    agentId        String  @default("")
+    agentName      String  @default("")
+    kills          Int     @default(0)
+    deaths         Int     @default(0)
+    assists        Int     @default(0)
+    score          Int     @default(0)
+    scorePerRound  Float   @default(0)
+    roundsPlayed   Int     @default(0)
+    damageMade     Int     @default(0)
+    damageReceived Int     @default(0)
+    headshots      Int     @default(0)
+    bodyshots      Int     @default(0)
+    legshots       Int     @default(0)
+    won            Boolean @default(false)
+
+    @@index([matchId])
+    @@index([puuid])
+  }
+
+  // ── Ecosistema competitivo VANTSNET ───────────────────────────────────────
+  // Los "enums" son strings validados en la frontera de la API con zod
+  // (el contrato guarda text; ver docs/DATABASE.md).
+
+  model User {
+    id            String                   @id @onCreate(cuid(2))
+    displayName   String
+    createdAt     TimestamptzString        @default(now())
+    updatedAt     TimestamptzString        @onCreate(now()) @onUpdate(now())
+    identities    ProviderIdentity[]
+    memberships   TeamMember[]
+    registrations TournamentRegistration[] @relation("registrationUser")
+  }
+
+  // Identidad externa vinculada (Discord, FACEIT, Riot, Steam).
+  // La sincronización es idempotente gracias a @@unique(provider, providerId).
+  model ProviderIdentity {
+    id          String             @id @onCreate(cuid(2))
+    userId      String
+    user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+    provider    String // discord | faceit | riot | steam
+    providerId  String
+    displayName String?
+    avatarUrl   String?
+    rawJson     String? // última respuesta del proveedor (referencia)
+    lastSyncAt  TimestamptzString?
+    createdAt   TimestamptzString  @default(now())
+
+    @@unique([provider, providerId])
+    @@index([userId])
+  }
+
+  model Team {
+    id            String                   @id @onCreate(cuid(2))
+    name          String
+    tag           String?
+    game          String                   @default("valorant")
+    region        String?
+    logoUrl       String?
+    description   String?
+    createdAt     TimestamptzString        @default(now())
+    updatedAt     TimestamptzString        @onCreate(now()) @onUpdate(now())
+    members       TeamMember[]
+    registrations TournamentRegistration[]
+    matchesHome   TournamentMatch[]        @relation("teamHome")
+    matchesAway   TournamentMatch[]        @relation("teamAway")
+
+    @@unique([name, game])
+  }
+
+  model TeamMember {
+    id       String            @id @onCreate(cuid(2))
+    teamId   String
+    team     Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    userId   String?
+    user     User?             @relation(fields: [userId], references: [id])
+    nickname String
+    role     String            @default("player") // player | captain | coach | substitute
+    joinedAt TimestamptzString @default(now())
+
+    @@unique([teamId, nickname])
+    @@index([userId])
+  }
+
+  model Tournament {
+    id                   String                   @id @onCreate(cuid(2))
+    slug                 String                   @unique
+    name                 String
+    game                 String                   @default("valorant")
+    format               String                   @default("single_elimination") // single_elimination | double_elimination | round_robin
+    status               String                   @default("draft") // draft | registration | running | completed | cancelled
+    maxTeams             Int                      @default(8)
+    description          String?
+    rules                String?
+    startsAt             TimestamptzString?
+    registrationDeadline TimestamptzString?
+    createdAt            TimestamptzString        @default(now())
+    updatedAt            TimestamptzString        @onCreate(now()) @onUpdate(now())
+    registrations        TournamentRegistration[]
+    matches              TournamentMatch[]
+  }
+
+  // Inscripción de un equipo a un torneo; @@unique impide duplicados.
+  model TournamentRegistration {
+    id             String            @id @onCreate(cuid(2))
+    tournamentId   String
+    tournament     Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+    teamId         String
+    team           Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    status         String            @default("pending") // pending | approved | rejected
+    notes          String?
+    registeredById String?
+    registeredBy   User?             @relation("registrationUser", fields: [registeredById], references: [id])
+    createdAt      TimestamptzString @default(now())
+
+    @@unique([tournamentId, teamId])
+  }
+
+  model TournamentMatch {
+    id               String             @id @onCreate(cuid(2))
+    tournamentId     String
+    tournament       Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+    round            Int                @default(1)
+    slot             String? // posición en el bracket: "QF1", "SF2", "F"...
+    homeTeamId       String?
+    homeTeam         Team?              @relation("teamHome", fields: [homeTeamId], references: [id])
+    awayTeamId       String?
+    awayTeam         Team?              @relation("teamAway", fields: [awayTeamId], references: [id])
+    homeScore        Int                @default(0)
+    awayScore        Int                @default(0)
+    status           String             @default("scheduled") // scheduled | live | completed | forfeit
+    externalMatchRef String? // externalId de la capa de partidas (Riot) si existe
+    playedAt         TimestamptzString?
+    createdAt        TimestamptzString  @default(now())
+    updatedAt        TimestamptzString  @onCreate(now()) @onUpdate(now())
+
+    @@index([tournamentId, round])
+  }
+
+  // Trazabilidad de mutaciones importantes (quién, qué, cuándo).
+  model AuditLog {
+    id         String            @id @onCreate(cuid(2))
+    actor      String // "admin-token" | userId
+    action     String // tournament.create | team.create | registration.approve...
+    entity     String
+    entityId   String?
+    detailJson String?
+    createdAt  TimestamptzString @default(now())
+
+    @@index([entity, entityId])
+    @@index([createdAt])
+  }
+}

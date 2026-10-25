@@ -47,20 +47,27 @@ export async function GET(req: NextRequest) {
     // Vinculación idempotente: si la identidad ya existe se actualiza; si no,
     // se crea (o reutiliza) un usuario interno y se enlaza.
     const displayName = me.global_name || me.username;
-    const identity = await db.providerIdentity.upsert({
-      where: { provider_providerId: { provider: 'discord', providerId: me.id } },
-      update: { displayName, avatarUrl: avatarUrl(me), lastSyncAt: new Date() },
-      create: {
+    await db.transaction(async (tx) => {
+      const existing = await tx.orm.public.ProviderIdentity
+        .whereUnique({ provider: 'discord', providerId: me.id })
+        .first();
+      if (existing) {
+        await tx.orm.public.ProviderIdentity.where({ id: existing.id }).update({
+          displayName,
+          avatarUrl: avatarUrl(me),
+          lastSyncAt: new Date().toISOString(),
+        });
+        return;
+      }
+      const user = await tx.orm.public.User.create({ displayName });
+      await tx.orm.public.ProviderIdentity.create({
         provider: 'discord',
         providerId: me.id,
         displayName,
         avatarUrl: avatarUrl(me),
-        lastSyncAt: new Date(),
-        user: {
-          create: { displayName },
-        },
-      },
-      include: { user: true },
+        lastSyncAt: new Date().toISOString(),
+        userId: user.id,
+      });
     });
 
     return backToApp(req.url, 'linked');

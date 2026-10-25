@@ -1,7 +1,7 @@
 // GET  /api/teams — lista pública de equipos
 // POST /api/teams — crear equipo (admin; header X-Admin-Token)
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isUniqueViolation, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import { firstIssueMessage, teamCreateInput } from '@/lib/validators';
@@ -10,14 +10,20 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const game = req.nextUrl.searchParams.get('game');
-  const teams = await db.team.findMany({
-    where: game ? { game } : undefined,
-    include: { members: true, _count: { select: { registrations: true } } },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-  });
+  const base = db.orm.public.Team.include('members');
+  const rows = await (game ? base.where({ game }) : base)
+    .orderBy((t) => t.createdAt.desc())
+    .limit(100)
+    .all();
+
+  // Recuento de inscripciones por equipo (equivalente al _count de v6)
+  const registrations = await db.orm.public.TournamentRegistration
+    .groupBy('teamId')
+    .aggregate((agg) => ({ total: agg.count() }));
+  const regByTeam = new Map(registrations.map((r) => [r.teamId, r.total]));
+
   return NextResponse.json({
-    teams: teams.map((t) => ({
+    teams: rows.map((t) => ({
       id: t.id,
       name: t.name,
       tag: t.tag,
@@ -25,8 +31,8 @@ export async function GET(req: NextRequest) {
       region: t.region,
       description: t.description,
       members: t.members.map((m) => ({ id: m.id, nickname: m.nickname, role: m.role })),
-      registrations: t._count.registrations,
-      createdAt: t.createdAt,
+      registrations: regByTeam.get(t.id) ?? 0,
+      createdAt: toIsoTimestamp(t.createdAt),
     })),
   });
 }
@@ -48,19 +54,28 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
 
   try {
-    const team = await db.team.create({
-      data: {
+    // El equipo y sus miembros iniciales se crean en una transacción
+    const team = await db.transaction(async (tx) => {
+      const created = await tx.orm.public.Team.create({
         name: data.name,
-        tag: data.tag,
+        tag: data.tag ?? null,
         game: data.game,
-        region: data.region,
-        description: data.description,
-        members: data.members
-          ? { create: data.members.map((m) => ({ nickname: m.nickname, role: m.role })) }
-          : undefined,
-      },
-      include: { members: true },
+        region: data.region ?? null,
+        description: data.description ?? null,
+      });
+      if (data.members?.length) {
+        await tx.orm.public.TeamMember.createAll(
+          data.members.map((m) => ({
+            teamId: created.id,
+            nickname: m.nickname,
+            role: m.role,
+          }))
+        );
+      }
+      return created;
     });
+    const members = await db.orm.public.TeamMember.where({ teamId: team.id }).all();
+
     await writeAudit({
       actor: 'admin-token',
       action: 'team.create',
@@ -68,10 +83,23 @@ export async function POST(req: NextRequest) {
       entityId: team.id,
       detail: { name: team.name, game: team.game },
     });
-    return NextResponse.json({ team }, { status: 201 });
+    return NextResponse.json(
+      {
+        team: {
+          id: team.id,
+          name: team.name,
+          tag: team.tag,
+          game: team.game,
+          region: team.region,
+          description: team.description,
+          members: members.map((m) => ({ id: m.id, nickname: m.nickname, role: m.role })),
+          createdAt: toIsoTimestamp(team.createdAt),
+        },
+      },
+      { status: 201 }
+    );
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'P2002') {
+    if (isUniqueViolation(err)) {
       return NextResponse.json(
         { error: `Ya existe un equipo llamado "${data.name}" para ${data.game}.`, code: 'DUPLICATE_TEAM' },
         { status: 409 }

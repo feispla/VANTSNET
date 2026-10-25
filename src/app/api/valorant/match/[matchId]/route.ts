@@ -1,6 +1,7 @@
 // GET /api/valorant/match/[matchId] — scoreboard completo de una partida
 import { NextRequest, NextResponse } from 'next/server';
 import { RiotError, fetchMatchReal, isRiotRegion } from '@/lib/valorant/riot';
+import { toIsoTimestamp } from '@/lib/db';
 import { demoMatchDetail } from '@/lib/valorant/demo-data';
 import type { MatchDetailResponse, MatchTeam } from '@/lib/valorant/types';
 
@@ -84,7 +85,7 @@ export async function GET(
       externalId: m.externalId,
       mapName: m.mapName,
       modeLabel: m.modeLabel,
-      playedAt: m.startedAt.toISOString(),
+      playedAt: toIsoTimestamp(m.startedAt)!,
       durationMs: m.durationMs,
       teams: teams.sort((a, b) => Number(b.won) - Number(a.won)),
     };

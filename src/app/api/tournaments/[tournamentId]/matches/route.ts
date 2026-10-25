@@ -1,7 +1,7 @@
 // POST  /api/tournaments/[tournamentId]/matches — programar partida (admin)
 // PATCH /api/tournaments/[tournamentId]/matches — reportar resultado (admin)
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import {
@@ -12,6 +12,11 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// Resumen público de un equipo (igual que el select { id, name, tag } de v6)
+function teamSummary(t: { id: string; name: string; tag: string | null } | null | undefined) {
+  return t ? { id: t.id, name: t.name, tag: t.tag } : null;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tournamentId: string }> }
@@ -20,10 +25,10 @@ export async function POST(
   if (denied) return denied;
 
   const { tournamentId } = await params;
-  const tournament = await db.tournament.findUnique({
-    where: { id: tournamentId },
-    select: { id: true, name: true },
-  });
+  const tournament = await db.orm.public.Tournament
+    .whereUnique({ id: tournamentId })
+    .select('id', 'name')
+    .first();
   if (!tournament) {
     return NextResponse.json({ error: 'Torneo no encontrado.' }, { status: 404 });
   }
@@ -41,30 +46,34 @@ export async function POST(
   const data = parsed.data;
 
   // Los equipos, si se indican, deben existir
-  for (const side of ['homeTeamId', 'awayTeamId'] as const) {
+  const sides = ['homeTeamId', 'awayTeamId'] as const;
+  for (const side of sides) {
     const teamId = data[side];
     if (teamId) {
-      const exists = await db.team.findUnique({ where: { id: teamId }, select: { id: true } });
+      const exists = await db.orm.public.Team.whereUnique({ id: teamId }).select('id').first();
       if (!exists) {
         return NextResponse.json({ error: 'Uno de los equipos no existe.' }, { status: 404 });
       }
     }
   }
 
-  const match = await db.tournamentMatch.create({
-    data: {
-      tournamentId: tournament.id,
-      round: data.round,
-      slot: data.slot,
-      homeTeamId: data.homeTeamId ?? null,
-      awayTeamId: data.awayTeamId ?? null,
-      playedAt: data.playedAt,
-    },
-    include: {
-      homeTeam: { select: { id: true, name: true, tag: true } },
-      awayTeam: { select: { id: true, name: true, tag: true } },
-    },
+  const match = await db.orm.public.TournamentMatch.create({
+    tournamentId: tournament.id,
+    round: data.round,
+    slot: data.slot ?? null,
+    homeTeamId: data.homeTeamId ?? null,
+    awayTeamId: data.awayTeamId ?? null,
+    playedAt: data.playedAt ?? null,
   });
+
+  // Se resuelven los equipos por separado: la v8 no combina create con include
+  const teamIds = [match.homeTeamId, match.awayTeamId].filter((x): x is string => Boolean(x));
+  const teams = teamIds.length
+    ? await db.orm.public.Team.where((t) => t.id.in(teamIds)).all()
+    : [];
+  const homeTeam = teams.find((t) => t.id === match.homeTeamId) ?? null;
+  const awayTeam = teams.find((t) => t.id === match.awayTeamId) ?? null;
+
   await writeAudit({
     actor: 'admin-token',
     action: 'match.schedule',
@@ -72,7 +81,25 @@ export async function POST(
     entityId: match.id,
     detail: { tournament: tournament.name, round: match.round, slot: match.slot },
   });
-  return NextResponse.json({ match }, { status: 201 });
+  return NextResponse.json(
+    {
+      match: {
+        id: match.id,
+        tournamentId: match.tournamentId,
+        round: match.round,
+        slot: match.slot,
+        homeTeamId: match.homeTeamId,
+        awayTeamId: match.awayTeamId,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        status: match.status,
+        playedAt: toIsoTimestamp(match.playedAt),
+        homeTeam: teamSummary(homeTeam),
+        awayTeam: teamSummary(awayTeam),
+      },
+    },
+    { status: 201 }
+  );
 }
 
 export async function PATCH(
@@ -94,7 +121,9 @@ export async function PATCH(
     return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
   }
 
-  const match = await db.tournamentMatch.findUnique({ where: { id: parsed.data.matchId } });
+  const match = await db.orm.public.TournamentMatch
+    .whereUnique({ id: parsed.data.matchId })
+    .first();
   if (!match || match.tournamentId !== tournamentId) {
     return NextResponse.json({ error: 'Partida no encontrada en ese torneo.' }, { status: 404 });
   }
@@ -105,31 +134,32 @@ export async function PATCH(
     );
   }
 
-  const data: {
+  const patch: {
     homeScore?: number;
     awayScore?: number;
     status?: string;
-    playedAt?: Date;
+    playedAt?: string | null;
   } = {
     homeScore: parsed.data.homeScore,
     awayScore: parsed.data.awayScore,
     status: parsed.data.status,
   };
   if (parsed.data.status === 'completed') {
-    data.playedAt = new Date();
+    patch.playedAt = new Date().toISOString();
   }
 
   // Transacción: el cambio de estado y el marcador se aplican atómicamente
-  const updated = await db.$transaction(async (tx) => {
-    return tx.tournamentMatch.update({
-      where: { id: match.id },
-      data,
-      include: {
-        homeTeam: { select: { id: true, name: true, tag: true } },
-        awayTeam: { select: { id: true, name: true, tag: true } },
-      },
-    });
+  const updated = await db.transaction(async (tx) => {
+    return tx.orm.public.TournamentMatch.where({ id: match.id }).update(patch);
   });
+  if (!updated) {
+    return NextResponse.json({ error: 'Partida no encontrada en ese torneo.' }, { status: 404 });
+  }
+
+  const teamIds = [updated.homeTeamId, updated.awayTeamId].filter((x): x is string => Boolean(x));
+  const teams = teamIds.length
+    ? await db.orm.public.Team.where((t) => t.id.in(teamIds)).all()
+    : [];
 
   await writeAudit({
     actor: 'admin-token',
@@ -138,5 +168,20 @@ export async function PATCH(
     entityId: match.id,
     detail: { previousStatus: match.status, ...parsed.data },
   });
-  return NextResponse.json({ match: updated });
+  return NextResponse.json({
+    match: {
+      id: updated.id,
+      tournamentId: updated.tournamentId,
+      round: updated.round,
+      slot: updated.slot,
+      homeTeamId: updated.homeTeamId,
+      awayTeamId: updated.awayTeamId,
+      homeScore: updated.homeScore,
+      awayScore: updated.awayScore,
+      status: updated.status,
+      playedAt: toIsoTimestamp(updated.playedAt),
+      homeTeam: teamSummary(teams.find((t) => t.id === updated.homeTeamId) ?? null),
+      awayTeam: teamSummary(teams.find((t) => t.id === updated.awayTeamId) ?? null),
+    },
+  });
 }

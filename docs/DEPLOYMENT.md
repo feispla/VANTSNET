@@ -5,14 +5,13 @@
 ## Requisitos
 
 - Node 20+ o Bun 1.x
-- Base de datos: SQLite (dev) o Neon PostgreSQL (prod) — ver `docs/DATABASE.md`
+- Base de datos: PostgreSQL — Prisma Postgres (plataforma) o Neon — ver `docs/DATABASE.md`
 - Variables de entorno del apartado «Configuración» (abajo)
 
 ## Construcción
 
 ```bash
 bun install --frozen-lockfile
-bunx prisma generate
 bun run build        # output: standalone (.next/standalone)
 bun run start        # sirve en :3000 (NODE_ENV=production)
 ```
@@ -53,7 +52,7 @@ Guía completa de cada variable: `docs/ENVIRONMENT.md`.
 ## Checklist de puesta en producción
 
 - [ ] `ADMIN_TOKEN` generado con `openssl rand -hex 32` y cargado como secret.
-- [ ] `bunx prisma migrate deploy` ejecutado contra Neon (no `db push`).
+- [ ] `prisma db migrate --db "$PROD_URL"` (o `db update` en dev) ejecutado contra la BD — no resets.
 - [ ] `/api/health` responde 200 tras el deploy.
 - [ ] CI verde en `main` (workflow `ci.yml`).
 - [ ] Secrets de Cloudflare/host cargados (nunca en el repo).

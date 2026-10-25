@@ -44,7 +44,9 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-useless-escape": "off",
   },
 }, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills",
+    // Generados por `prisma contract emit` / `prisma db update` (se commitean pero no se lintan)
+    "src/prisma/contract.d.ts", "src/prisma/contract.json", "migrations/**"]
 }];
 
 export default eslintConfig;

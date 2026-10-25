@@ -166,7 +166,7 @@ Riot pide un enlace funcional y *"incomplete websites are unlikely to be approve
 
 **Opción B — Servidor propio:** Docker + Nginx + certificado TLS (Let's Encrypt) apuntando a `valorant.vantsnet.gg`.
 
-> El prototipo usa SQLite vía Prisma; para Vercel conviene migrar a PostgreSQL serverless (Neon, Supabase o Vercel Postgres) — cambia solo `DATABASE_URL` y `prisma db push`. Esto además acerca el prototipo al esquema PostgreSQL documentado en `ARQUITECTURA.md`.
+> El prototipo ya corre sobre PostgreSQL vía Prisma ORM 8 (`@prisma/orm-postgres`); para Vercel/Fly apunta `DATABASE_URL` a PostgreSQL serverless (Neon, Supabase o Vercel Postgres) y aplica el contrato con `bun run db:update`. El esquema ya es PostgreSQL nativo (ver `DATABASE.md`).
 
 ---
 

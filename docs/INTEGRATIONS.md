@@ -39,7 +39,7 @@ Principio central: **estados honestos**. Si una integración no está configurad
 VANTSNET es una app Next.js con backend (Prisma + rutas API). Opciones evaluadas en `docs/DEPLOYMENT.md`:
 
 - **Opción A (recomendada para empezar)**: Node/VPS con Cloudflare como proxy (DNS, WAF gestionado, rate limiting, HTTPS) delante del servidor Node. Sin cambios de arquitectura; `/api/health` sirve como health check del balanceador.
-- **Opción B (edge)**: `@opennextjs/cloudflare` para Workers/Pages + Neon Hyperdrive; **no verificada** en esta fase (requiere validar el driver SQLite→Postgres en el runtime edge).
+- **Opción B (edge)**: `@opennextjs/cloudflare` para Workers/Pages + Neon Hyperdrive; **no verificada** en esta fase (Prisma ORM 8 usa `@prisma/orm-postgres` sobre TCP; para edge se evaluaría el driver serverless de Prisma Postgres).
 
 No se ha desplegado nada en Cloudflare desde esta fase (requiere autorización y credenciales del dominio).
 

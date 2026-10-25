@@ -11,14 +11,12 @@ export interface AuditEntry {
 
 export async function writeAudit(entry: AuditEntry): Promise<void> {
   try {
-    await db.auditLog.create({
-      data: {
-        actor: entry.actor,
-        action: entry.action,
-        entity: entry.entity,
-        entityId: entry.entityId ?? null,
-        detailJson: entry.detail === undefined ? null : JSON.stringify(entry.detail),
-      },
+    await db.orm.public.AuditLog.create({
+      actor: entry.actor,
+      action: entry.action,
+      entity: entry.entity,
+      entityId: entry.entityId ?? null,
+      detailJson: entry.detail === undefined ? null : JSON.stringify(entry.detail),
     });
   } catch (err) {
     // La auditoría no debe romper la operación principal, pero sí debe quedar

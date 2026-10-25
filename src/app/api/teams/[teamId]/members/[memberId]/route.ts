@@ -14,11 +14,11 @@ export async function DELETE(
   if (denied) return denied;
 
   const { teamId, memberId } = await params;
-  const member = await db.teamMember.findUnique({ where: { id: memberId } });
+  const member = await db.orm.public.TeamMember.whereUnique({ id: memberId }).first();
   if (!member || member.teamId !== teamId) {
     return NextResponse.json({ error: 'Miembro no encontrado en ese equipo.' }, { status: 404 });
   }
-  await db.teamMember.delete({ where: { id: member.id } });
+  await db.orm.public.TeamMember.whereUnique({ id: member.id }).delete();
   await writeAudit({
     actor: 'admin-token',
     action: 'team.member.remove',

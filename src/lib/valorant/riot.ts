@@ -1,7 +1,7 @@
 // Cliente de la API oficial de Riot (solo servidor) + persistencia + agregación
 // Patrón VANTSNET: caché en BD (partidas se guardan UNA vez), errores tipados en español.
 
-import { db } from '@/lib/db';
+import { db, toIsoTimestamp } from '@/lib/db';
 import type {
   AgentSummary,
   MatchSummary,
@@ -152,16 +152,32 @@ const prettyMap = (mapUrlOrName: string) => {
   return known[mapUrlOrName] ?? mapUrlOrName.split('/').pop()?.replace('_Main', '') ?? 'Mapa';
 };
 
-async function fetchAndStoreMatch(matchId: string, region: RiotRegion, key: string) {
-  const raw = await riotFetch<RawMatch>(region, `/val/match/v1/matches/${matchId}`, key);
-  const content = await getContent(region, key);
-  const mapName = content.mapNameByMapUrl[raw.matchInfo.mapId] ?? prettyMap(raw.matchInfo.mapId);
-  const mode = raw.matchInfo.queueID ?? 'unknown';
+interface PlayerStatRow {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  teamId: string;
+  agentId: string;
+  agentName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  score: number;
+  scorePerRound: number;
+  roundsPlayed: number;
+  damageMade: number;
+  damageReceived: number;
+  headshots: number;
+  bodyshots: number;
+  legshots: number;
+  won: boolean;
+}
+
+function mapRiotPlayers(raw: RawMatch, content: ContentCache): PlayerStatRow[] {
   const teams = raw.teams ?? [];
   const roundsPlayed = teams[0]?.roundsPlayed ?? 0;
   const teamWon = new Map(teams.map((t) => [t.teamId, t.won]));
-
-  const players = (raw.players ?? []).map((p) => ({
+  return (raw.players ?? []).map((p) => ({
     puuid: p.puuid,
     gameName: p.gameName,
     tagLine: p.tagLine,
@@ -181,32 +197,23 @@ async function fetchAndStoreMatch(matchId: string, region: RiotRegion, key: stri
     legshots: p.legshots ?? 0,
     won: teamWon.get(p.teamId) ?? false,
   }));
+}
 
-  await db.match.upsert({
-    where: { externalId: raw.matchInfo.matchId },
-    update: { raw: JSON.stringify(raw) },
-    create: {
-      game: 'valorant',
-      externalId: raw.matchInfo.matchId,
-      mapId: raw.matchInfo.mapId,
-      mapName,
-      mode,
-      modeLabel: MODE_LABELS[mode] ?? mode,
-      startedAt: new Date(raw.matchInfo.gameStartMillis),
-      durationMs: raw.matchInfo.gameLengthMillis,
-      roundsPlayed,
-      teamsJson: JSON.stringify(teams),
-      raw: JSON.stringify(raw),
-      players: { create: players },
-    },
-  });
+// Guarda (o refresca) una partida y sus stats. Cada partida se colecta UNA
+// sola vez: si ya existía, solo se actualiza el JSON crudo. Todo en una
+// transacción: jugadores -> partida -> stats (el FK exige Player previo).
+async function storeMatch(raw: RawMatch, region: RiotRegion, content: ContentCache) {
+  const mapName = content.mapNameByMapUrl[raw.matchInfo.mapId] ?? prettyMap(raw.matchInfo.mapId);
+  const mode = raw.matchInfo.queueID ?? 'unknown';
+  const teams = raw.teams ?? [];
+  const roundsPlayed = teams[0]?.roundsPlayed ?? 0;
+  const players = mapRiotPlayers(raw, content);
 
-  // También registra a todos los jugadores vistos (patrón "players" del blueprint)
-  for (const p of players) {
-    if (p.puuid) {
-      await db.player.upsert({
-        where: { puuid: p.puuid },
-        update: { gameName: p.gameName, tagLine: p.tagLine, region },
+  await db.transaction(async (tx) => {
+    // 1) Registro de todos los jugadores vistos (patrón "players" del blueprint)
+    for (const p of players) {
+      if (!p.puuid) continue;
+      await tx.orm.public.Player.upsert({
         create: {
           game: 'valorant',
           puuid: p.puuid,
@@ -214,9 +221,60 @@ async function fetchAndStoreMatch(matchId: string, region: RiotRegion, key: stri
           tagLine: p.tagLine || '',
           region,
         },
+        update: { gameName: p.gameName, tagLine: p.tagLine, region },
+        conflictOn: { puuid: p.puuid },
       });
     }
-  }
+
+    // 2) Partida: insert con stats anidados, o update del JSON crudo si existe
+    const existing = await tx.orm.public.Match
+      .whereUnique({ externalId: raw.matchInfo.matchId })
+      .select('id')
+      .first();
+    if (existing) {
+      await tx.orm.public.Match.where({ id: existing.id }).update({ raw: JSON.stringify(raw) });
+      return;
+    }
+
+    const match = await tx.orm.public.Match.create({
+      game: 'valorant',
+      externalId: raw.matchInfo.matchId,
+      mapId: raw.matchInfo.mapId,
+      mapName,
+      mode,
+      modeLabel: MODE_LABELS[mode] ?? mode,
+      startedAt: toIsoTimestamp(new Date(raw.matchInfo.gameStartMillis))!,
+      durationMs: raw.matchInfo.gameLengthMillis,
+      roundsPlayed,
+      teamsJson: JSON.stringify(teams),
+      raw: JSON.stringify(raw),
+    });
+
+    // 3) Stats de los 10 jugadores (sin restricción única: solo en el insert)
+    await tx.orm.public.MatchPlayerStat.createAll(
+      players.map((p) => ({
+        matchId: match.id,
+        puuid: p.puuid,
+        gameName: p.gameName,
+        tagLine: p.tagLine,
+        teamId: p.teamId,
+        agentId: p.agentId,
+        agentName: p.agentName,
+        kills: p.kills,
+        deaths: p.deaths,
+        assists: p.assists,
+        score: p.score,
+        scorePerRound: p.scorePerRound,
+        roundsPlayed: p.roundsPlayed,
+        damageMade: p.damageMade,
+        damageReceived: p.damageReceived,
+        headshots: p.headshots,
+        bodyshots: p.bodyshots,
+        legshots: p.legshots,
+        won: p.won,
+      }))
+    );
+  });
 }
 
 async function resolveAccount(riotId: string, region: RiotRegion, key: string) {
@@ -227,17 +285,17 @@ async function resolveAccount(riotId: string, region: RiotRegion, key: string) {
   const acc = await riotFetch<{ puuid: string; gameName: string; tagLine: string }>(
     region, `/riot/account/v1/accounts/by-riot-id/${enc}`, key
   );
-  await db.player.upsert({
-    where: { puuid: acc.puuid },
-    update: { gameName: acc.gameName, tagLine: acc.tagLine, region, lastFetchedAt: new Date() },
+  await db.orm.public.Player.upsert({
     create: {
       game: 'valorant',
       puuid: acc.puuid,
       gameName: acc.gameName,
       tagLine: acc.tagLine,
       region,
-      lastFetchedAt: new Date(),
+      lastFetchedAt: toIsoTimestamp(new Date())!,
     },
+    update: { gameName: acc.gameName, tagLine: acc.tagLine, region, lastFetchedAt: toIsoTimestamp(new Date())! },
+    conflictOn: { puuid: acc.puuid },
   });
   return acc;
 }
@@ -248,11 +306,13 @@ export async function buildProfile(
   player: { gameName: string; tagLine: string; region: string },
   demo: boolean
 ): Promise<ProfileResponse> {
-  const stats = await db.matchPlayerStat.findMany({
-    where: { puuid },
-    include: { match: true },
-    orderBy: { match: { startedAt: 'desc' } },
-  });
+  // La v8 no ordena por campos de la relación incluida: se ordena en memoria
+  // por startedAt (mismo criterio que orderBy: { match: { startedAt: 'desc' } }).
+  const stats = await db.orm.public.MatchPlayerStat
+    .include('match')
+    .where({ puuid })
+    .all();
+  stats.sort((a, b) => Date.parse(b.match.startedAt) - Date.parse(a.match.startedAt));
 
   const agg: ProfileAggregate = {
     matches: stats.length, wins: 0, winrate: 0, kills: 0, deaths: 0, assists: 0,
@@ -287,7 +347,7 @@ export async function buildProfile(
       mapName: s.match.mapName,
       mode: s.match.mode,
       modeLabel: s.match.modeLabel,
-      playedAt: s.match.startedAt.toISOString(),
+      playedAt: toIsoTimestamp(s.match.startedAt)!,
       durationMs: s.match.durationMs,
       won: s.won,
       roundsWon: s.won ? Math.max(13, Math.ceil((s.match.roundsPlayed || 0) / 2)) : Math.floor((s.match.roundsPlayed || 0) / 2),
@@ -339,71 +399,35 @@ export async function fetchProfileReal(riotId: string, region: RiotRegion, key: 
     throw new RiotError('NO_DATA', 'Este jugador no tiene partidas recientes registradas en la API de Valorant.');
   }
   for (const id of ids) {
-    const existing = await db.match.findUnique({ where: { externalId: id }, select: { id: true } });
+    const existing = await db.orm.public.Match
+      .whereUnique({ externalId: id })
+      .select('id')
+      .first();
     if (!existing) {
-      await fetchAndStoreMatch(id, region, key); // cada partida se colecta UNA sola vez
+      const raw = await riotFetch<RawMatch>(region, `/val/match/v1/matches/${id}`, key);
+      const content = await getContent(region, key);
+      await storeMatch(raw, region, content); // cada partida se colecta UNA sola vez
     }
   }
   return buildProfile(acc.puuid, { gameName: acc.gameName, tagLine: acc.tagLine, region }, false);
 }
 
 export async function fetchMatchReal(matchId: string, region: RiotRegion, key: string) {
-  const existing = await db.match.findUnique({
-    where: { externalId: matchId },
-    include: { players: true },
-  });
+  const existing = await db.orm.public.Match
+    .include('players')
+    .whereUnique({ externalId: matchId })
+    .first();
   if (existing) return existing;
 
   // verifica que el id exista en Riot antes de guardar
   const raw = await riotFetch<RawMatch>(region, `/val/match/v1/matches/${matchId}`, key);
   const content = await getContent(region, key);
-  const mapName = content.mapNameByMapUrl[raw.matchInfo.mapId] ?? prettyMap(raw.matchInfo.mapId);
-  const mode = raw.matchInfo.queueID ?? 'unknown';
-  const teams = raw.teams ?? [];
-  const roundsPlayed = teams[0]?.roundsPlayed ?? 0;
-  const teamWon = new Map(teams.map((t) => [t.teamId, t.won]));
+  await storeMatch(raw, region, content);
 
-  await db.match.upsert({
-    where: { externalId: raw.matchInfo.matchId },
-    update: { raw: JSON.stringify(raw) },
-    create: {
-      game: 'valorant',
-      externalId: raw.matchInfo.matchId,
-      mapId: raw.matchInfo.mapId,
-      mapName,
-      mode,
-      modeLabel: MODE_LABELS[mode] ?? mode,
-      startedAt: new Date(raw.matchInfo.gameStartMillis),
-      durationMs: raw.matchInfo.gameLengthMillis,
-      roundsPlayed,
-      teamsJson: JSON.stringify(teams),
-      raw: JSON.stringify(raw),
-      players: {
-        create: (raw.players ?? []).map((p) => ({
-          puuid: p.puuid,
-          gameName: p.gameName,
-          tagLine: p.tagLine,
-          teamId: p.teamId,
-          agentId: p.characterId,
-          agentName: content.agentNameByUuid[p.characterId] ?? 'Desconocido',
-          kills: p.stats?.kills ?? 0,
-          deaths: p.stats?.deaths ?? 0,
-          assists: p.stats?.assists ?? 0,
-          score: p.stats?.score ?? 0,
-          scorePerRound: p.stats?.scorePerRound ?? 0,
-          roundsPlayed,
-          damageMade: p.damage_made ?? 0,
-          damageReceived: p.damage_received ?? 0,
-          headshots: p.headshots ?? 0,
-          bodyshots: p.bodyshots ?? 0,
-          legshots: p.legshots ?? 0,
-          won: teamWon.get(p.teamId) ?? false,
-        })),
-      },
-    },
-  });
-
-  const saved = await db.match.findUnique({ where: { externalId: matchId }, include: { players: true } });
+  const saved = await db.orm.public.Match
+    .include('players')
+    .whereUnique({ externalId: matchId })
+    .first();
   if (!saved) throw new RiotError('NETWORK', 'No se pudo guardar la partida.');
   return saved;
 }

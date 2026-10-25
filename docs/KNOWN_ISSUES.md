@@ -20,7 +20,7 @@ Registradas al cierre de la fase de completación autónoma (25/10/2026). Cada e
 | 7 | **Rate limiting** en la API propia | Abuso posible de endpoints costosos en despliegue público | Alta | Cloudflare rate limiting (Opción A) o middleware con contador en memoria/Redis |
 | 8 | **E2E automatizados** (Playwright) en CI | La verificación E2E actual es manual (documentada en TESTING.md) | Media | Añadir `@playwright/test` + job CI con build standalone |
 | 9 | **Brackets y standings automáticos** | El bracket se gestiona con partidas manuales (round/slot); no se generan cruces ni tablas automáticamente | Media | Implementar generador por formato (single/double elimination, round robin) + tabla de posiciones con transacciones |
-| 10 | **Migraciones versionadas para Neon** | El esquema dev se aplica con `db push`; en Postgres conviene `migrate dev` versionado | Alta (al migrar) | Seguir `DATABASE.md` §Migración a Neon |
+| 10 | **Prisma ORM 8 en release candidate** | `prisma@8.0.0-rc.27` + `@prisma/orm-postgres@8.0.0-rc.20`; la plataforma Prisma exige Prisma 8. La API puede cambiar entre RCs | Media | Vigilar changelog de Prisma; el contrato y la API están aislados en `src/prisma/` y `src/lib/db.ts` |
 | 11 | **Bot de Discord** (anuncios/recordatorios de torneos) | Comunidad sin notificaciones automáticas | Media | Bot con permisos mínimos + webhooks por servidor; tras OAuth activo |
 | 12 | **Cobertura cuantitativa de tests** | No se afirma cobertura medida | Baja | Añadir `vitest --coverage` al job CI |
 | 13 | Dependencias sandbox no usadas (dnd-kit, mdxeditor, next-intl, next-auth…) en `package.json` | Peso de instalación mayor de lo estrictamente necesario | Baja | Depuración de dependencias en una PR dedicada (verificar sin romper shadcn/ui) |

@@ -24,21 +24,25 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Falta providerId de Discord.' }, { status: 400 });
   }
 
-  const identity = await db.providerIdentity.findUnique({
-    where: { provider_providerId: { provider: 'discord', providerId } },
-  });
+  const identity = await db.orm.public.ProviderIdentity
+    .whereUnique({ provider: 'discord', providerId })
+    .first();
   if (!identity) {
     return NextResponse.json({ error: 'Identidad de Discord no vinculada.' }, { status: 404 });
   }
 
   // Transacción: la identidad se elimina y el usuario huérfano (sin otras
   // identidades ni equipos) se limpia para evitar registros fantasma.
-  await db.$transaction(async (tx) => {
-    await tx.providerIdentity.delete({ where: { id: identity.id } });
-    const remaining = await tx.providerIdentity.count({ where: { userId: identity.userId } });
-    const memberships = await tx.teamMember.count({ where: { userId: identity.userId } });
-    if (remaining === 0 && memberships === 0) {
-      await tx.user.delete({ where: { id: identity.userId } });
+  await db.transaction(async (tx) => {
+    await tx.orm.public.ProviderIdentity.whereUnique({ id: identity.id }).delete();
+    const identityAgg = await tx.orm.public.ProviderIdentity
+      .where({ userId: identity.userId })
+      .aggregate((agg) => ({ remaining: agg.count() }));
+    const memberAgg = await tx.orm.public.TeamMember
+      .where({ userId: identity.userId })
+      .aggregate((agg) => ({ memberships: agg.count() }));
+    if (identityAgg.remaining === 0 && memberAgg.memberships === 0) {
+      await tx.orm.public.User.whereUnique({ id: identity.userId }).delete();
     }
   });
 

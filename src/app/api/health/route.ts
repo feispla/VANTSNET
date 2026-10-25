@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   let database: 'ok' | 'error' = 'ok';
   try {
-    await db.$queryRaw`SELECT 1`;
+    // Sonda mínima contra la base de datos (equivalente al SELECT 1 de v6)
+    await db.query(db.raw.sql`SELECT 1 AS ok`.returnsRow({ ok: 'pg/int4@1' }).build());
   } catch {
     database = 'error';
   }

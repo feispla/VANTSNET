@@ -18,6 +18,11 @@ jobs:
     name: Lint · Typecheck · Tests · Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # La migración a Prisma ORM 8 usa PostgreSQL (ver docs/DATABASE.md).
+      # El cliente solo se conecta ante la primera query, así que para lint,
+      # typecheck, tests (sin BD) y build basta una URL bien formada.
+      DATABASE_URL: postgresql://prisma:prisma@localhost:5432/vantsnet_ci
     steps:
       - uses: actions/checkout@v4
 
@@ -29,11 +34,6 @@ jobs:
       - name: Instalar dependencias (lockfile congelado)
         run: bun install --frozen-lockfile
 
-      - name: Preparar base de datos de CI (SQLite)
-        run: bunx prisma db push --accept-data-loss
-        env:
-          DATABASE_URL: file:./ci.db
-
       - name: Lint
         run: bun run lint
 
@@ -42,13 +42,9 @@ jobs:
 
       - name: Tests
         run: bun run test
-        env:
-          DATABASE_URL: file:./ci.db
 
       - name: Build de producción
         run: bun run build
-        env:
-          DATABASE_URL: file:./ci.db
 
       - name: Resumen
         if: always()

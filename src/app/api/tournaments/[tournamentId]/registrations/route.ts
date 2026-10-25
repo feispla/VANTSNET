@@ -1,7 +1,7 @@
 // POST  /api/tournaments/[tournamentId]/registrations — inscribir equipo (admin)
 // PATCH /api/tournaments/[tournamentId]/registrations — aprobar/rechazar (admin)
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isUniqueViolation, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import {
@@ -20,10 +20,9 @@ export async function POST(
   if (denied) return denied;
 
   const { tournamentId } = await params;
-  const tournament = await db.tournament.findUnique({
-    where: { id: tournamentId },
-    select: { id: true, name: true, status: true, maxTeams: true, registrationDeadline: true },
-  });
+  const tournament = await db.orm.public.Tournament
+    .whereUnique({ id: tournamentId })
+    .first();
   if (!tournament) {
     return NextResponse.json({ error: 'Torneo no encontrado.' }, { status: 404 });
   }
@@ -33,7 +32,7 @@ export async function POST(
       { status: 409 }
     );
   }
-  if (tournament.registrationDeadline && new Date() > tournament.registrationDeadline) {
+  if (tournament.registrationDeadline && new Date() > new Date(tournament.registrationDeadline)) {
     return NextResponse.json(
       { error: 'El plazo de inscripción está cerrado.' },
       { status: 409 }
@@ -51,14 +50,19 @@ export async function POST(
     return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
   }
 
-  const team = await db.team.findUnique({ where: { id: parsed.data.teamId }, select: { id: true, name: true } });
+  const team = await db.orm.public.Team
+    .whereUnique({ id: parsed.data.teamId })
+    .select('id', 'name')
+    .first();
   if (!team) {
     return NextResponse.json({ error: 'Equipo no encontrado.' }, { status: 404 });
   }
 
   // Límite de plazas: cuenta + 1 no puede superar maxTeams
-  const current = await db.tournamentRegistration.count({ where: { tournamentId: tournament.id } });
-  if (current >= tournament.maxTeams) {
+  const regAgg = await db.orm.public.TournamentRegistration
+    .where({ tournamentId: tournament.id })
+    .aggregate((agg) => ({ current: agg.count() }));
+  if (regAgg.current >= tournament.maxTeams) {
     return NextResponse.json(
       { error: `El torneo está completo (${tournament.maxTeams} equipos).` },
       { status: 409 }
@@ -66,13 +70,10 @@ export async function POST(
   }
 
   try {
-    const registration = await db.tournamentRegistration.create({
-      data: {
-        tournamentId: tournament.id,
-        teamId: team.id,
-        notes: parsed.data.notes,
-      },
-      include: { team: { select: { id: true, name: true, tag: true } } },
+    const registration = await db.orm.public.TournamentRegistration.create({
+      tournamentId: tournament.id,
+      teamId: team.id,
+      notes: parsed.data.notes ?? null,
     });
     await writeAudit({
       actor: 'admin-token',
@@ -81,10 +82,22 @@ export async function POST(
       entityId: registration.id,
       detail: { tournament: tournament.name, team: team.name },
     });
-    return NextResponse.json({ registration }, { status: 201 });
+    return NextResponse.json(
+      {
+        registration: {
+          id: registration.id,
+          tournamentId: registration.tournamentId,
+          teamId: registration.teamId,
+          status: registration.status,
+          notes: registration.notes,
+          createdAt: toIsoTimestamp(registration.createdAt),
+          team: { id: team.id, name: team.name },
+        },
+      },
+      { status: 201 }
+    );
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'P2002') {
+    if (isUniqueViolation(err)) {
       return NextResponse.json(
         { error: 'Ese equipo ya está inscrito en el torneo.', code: 'DUPLICATE_REGISTRATION' },
         { status: 409 }
@@ -114,18 +127,20 @@ export async function PATCH(
     return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
   }
 
-  const registration = await db.tournamentRegistration.findUnique({
-    where: { id: parsed.data.registrationId },
-  });
+  const registration = await db.orm.public.TournamentRegistration
+    .whereUnique({ id: parsed.data.registrationId })
+    .first();
   if (!registration || registration.tournamentId !== tournamentId) {
     return NextResponse.json({ error: 'Inscripción no encontrada en ese torneo.' }, { status: 404 });
   }
 
   const newStatus = parsed.data.action === 'approve' ? 'approved' : 'rejected';
-  const updated = await db.tournamentRegistration.update({
-    where: { id: registration.id },
-    data: { status: newStatus },
-  });
+  const updated = await db.orm.public.TournamentRegistration
+    .where({ id: registration.id })
+    .update({ status: newStatus });
+  if (!updated) {
+    return NextResponse.json({ error: 'Inscripción no encontrada en ese torneo.' }, { status: 404 });
+  }
   await writeAudit({
     actor: 'admin-token',
     action: `registration.${parsed.data.action}`,
@@ -133,5 +148,5 @@ export async function PATCH(
     entityId: registration.id,
     detail: { previousStatus: registration.status, newStatus },
   });
-  return NextResponse.json({ registration: updated });
+  return NextResponse.json({ registration: { ...updated, createdAt: toIsoTimestamp(updated.createdAt) } });
 }
