@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, isUniqueViolation, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
+import { EVENTS, publishBusEvent } from '@/lib/bus/vants-bus';
 import {
   firstIssueMessage,
   registrationActionInput,
@@ -81,6 +82,14 @@ export async function POST(
       entity: 'TournamentRegistration',
       entityId: registration.id,
       detail: { tournament: tournament.name, team: team.name },
+    });
+    // VANTS-BUS: la inscripción quedó guardada; flask-agents puede
+    // postearla en Discord y VANTS HUB muestra la notificación.
+    // El envío no bloquea la respuesta y queda apagado sin bus.
+    publishBusEvent(EVENTS.INSCRIPTION_CREATED, {
+      tournamentId: tournament.slug,
+      teamId: team.id,
+      game: tournament.game,
     });
     return NextResponse.json(
       {
