@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
+import { EVENTS, publishBusEvent } from '@/lib/bus/vants-bus';
 import {
   firstIssueMessage,
   tournamentMatchCreateInput,
@@ -28,7 +29,7 @@ export async function POST(
   const { tournamentId } = await params;
   const tournament = await db.orm.public.Tournament
     .whereUnique({ id: tournamentId })
-    .select('id', 'name')
+    .select('id', 'name', 'game')
     .first();
   if (!tournament) {
     return NextResponse.json({ error: 'Torneo no encontrado.' }, { status: 404 });
@@ -82,6 +83,15 @@ export async function POST(
     entityId: match.id,
     detail: { tournament: tournament.name, round: match.round, slot: match.slot },
   });
+ feat/vants-bus
+  // VANTS-BUS: la partida quedó programada; flask-agents y VANTS HUB
+  // pueden avisar. El envío no bloquea la respuesta ni rompe el endpoint.
+  publishBusEvent(EVENTS.MATCH_SCHEDULED, {
+    matchId: match.id,
+    game: tournament.game,
+    startsAt: match.playedAt ? toIsoTimestamp(match.playedAt) : null,
+  });
+
   // VANTS-BUS: si la partida se programó con fecha, el ecosistema se entera
   // (flask-agents y VANTS HUB consumen match.scheduled).
   if (match.playedAt) {
@@ -95,6 +105,7 @@ export async function POST(
       startsAt: match.playedAt,
     });
   }
+ main
   return NextResponse.json(
     {
       match: {
@@ -182,6 +193,25 @@ export async function PATCH(
     entityId: match.id,
     detail: { previousStatus: match.status, ...parsed.data },
   });
+feat/vants-bus
+  // VANTS-BUS: al cerrar la partida (completed o forfeit) se publica el
+  // resultado para que flask-agents lo redacte y VANTS HUB lo notifique.
+  if (updated.status === 'completed' || updated.status === 'forfeit') {
+    const torneoBus = await db.orm.public.Tournament
+      .whereUnique({ id: tournamentId })
+      .select('game')
+      .first();
+    const homeTeamBus = teams.find((t) => t.id === updated.homeTeamId) ?? null;
+    const awayTeamBus = teams.find((t) => t.id === updated.awayTeamId) ?? null;
+    publishBusEvent(EVENTS.MATCH_FINISHED, {
+      matchId: updated.id,
+      game: torneoBus?.game ?? '',
+      a: homeTeamBus?.name ?? updated.homeTeamId ?? 'Equipo local',
+      b: awayTeamBus?.name ?? updated.awayTeamId ?? 'Equipo visitante',
+      sa: updated.homeScore,
+      sb: updated.awayScore,
+      finishedAt: toIsoTimestamp(updated.playedAt) ?? new Date().toISOString(),
+
   // VANTS-BUS: resultado cerrado. El contrato pide los NOMBRES de los
   // equipos (a y b) y el marcador (sa y sb); ya están resueltos arriba.
   if (updated.status === 'completed') {
@@ -197,6 +227,7 @@ export async function PATCH(
       sa: updated.homeScore,
       sb: updated.awayScore,
       finishedAt: updated.playedAt ?? new Date().toISOString(),
+main
     });
   }
   return NextResponse.json({
