@@ -13,6 +13,7 @@ Este repo ya incluye un **prototipo funcional de la red** construido con la ruta
 - **Primer endpoint de Steam (Fase 4)**: `GET /api/steam/resolve?query=<steamid64|vanity>` resuelve perfiles de Steam (SteamID64, vanity URL o URL completa) y la biblioteca de juegos pública vía Steam Web API.
 - **Ecosistema competitivo (nuevo)**: torneos con estados (borrador → inscripción → en juego → completado), equipos con plantillas, inscripciones anti-duplicado, partidas con resultados validados y **registro de auditoría** completo. Se gestiona desde la vista «Competitivo» de la app (botón en la cabecera) con token de administración.
 - **Discord OAuth2 y FACEIT** (nuevo): módulos de integración implementados con estados honestos «no configurado» hasta definir las credenciales — guía en [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+- **VANTS-BUS** (nuevo): el prototipo publica sus eventos al bus del ecosistema (`tournament.inscriptions_opened`, `inscription.created`, `match.scheduled`, `match.finished`) con identidad `vantsnet`; flask-agents y VANTS HUB los consumen. Sin `VANTS_BUS_URL`/`VANTS_BUS_SECRET` la publicación queda apagada y todo funciona igual.
 - **Panel de estado**: pestaña «Estado» y `GET /api/health` muestran la salud real del servicio y qué integraciones están activas (sin exponer secretos).
 
 ### Calidad y CI
@@ -55,6 +56,7 @@ Variables de entorno (referencia completa en [`docs/ENVIRONMENT.md`](docs/ENVIRO
 | `ADMIN_TOKEN` | Para admin | Mutaciones de torneos/equipos (header `X-Admin-Token`); sin él, `503` honesto |
 | `DISCORD_*` | Para Discord | OAuth2 identidad (`CLIENT_ID`, `CLIENT_SECRET`, `OAUTH_STATE_SECRET`, `REDIRECT_URI`) |
 | `FACEIT_API_KEY` | Para FACEIT | Server key de FACEIT Data API v4 |
+| `VANTS_BUS_URL` + `VANTS_BUS_SECRET` | Para el bus | Publica los eventos de torneos al ecosistema; sin ellas la publicación queda apagada |
 
 > Las claves viven **solo en el backend** (`.env`, excluido del repo por `.gitignore`) y nunca se exponen al cliente.
 
