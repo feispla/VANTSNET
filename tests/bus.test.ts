@@ -1,17 +1,15 @@
- feat/vants-bus
-// Tests del cliente VANTS-BUS (sin red: fetch simulado).
-// Ejecutar: bunx vitest run
+// Tests del cliente VANTS-BUS y de la publicación con identidad.
+// Sin red: fetch simulado (por inyección en el cliente, por stub global
+// en la capa de identidad). Ejecutar: bunx vitest run
 import { createHmac } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EVENTS,
-  getBus,
-  publishBusEvent,
-  resetBusForTests,
+  VANTSNET_PROJECT_ID,
   VantsBus,
   VantsBusError,
-  VANTSNET_PROJECT_ID,
 } from '@/lib/bus/vants-bus';
+import { publishBusEvent } from '@/lib/bus/publish';
 
 const SECRET = 'test-secret-para-vitest';
 const BUS_URL = 'https://vants-bus.test.workers.dev';
@@ -32,8 +30,8 @@ function fetchFalso(respuesta: unknown, status = 200) {
 }
 
 afterEach(() => {
-  resetBusForTests();
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe('VANTS-BUS — contrato de eventos', () => {
@@ -126,37 +124,7 @@ describe('VANTS-BUS — cliente', () => {
   });
 });
 
-describe('VANTS-BUS — instancia de VANTSNET', () => {
-  it('queda apagada si faltan VANTS_BUS_URL o VANTS_BUS_SECRET', () => {
-    vi.stubEnv('VANTS_BUS_URL', '');
-    vi.stubEnv('VANTS_BUS_SECRET', '');
-    expect(getBus()).toBeNull();
-    // publishBusEvent no lanza con el bus apagado
-    expect(() => publishBusEvent(EVENTS.MATCH_FINISHED, {})).not.toThrow();
-  });
-
-  it('se construye con las variables de entorno y es singleton', () => {
-    vi.stubEnv('VANTS_BUS_URL', BUS_URL);
-    vi.stubEnv('VANTS_BUS_SECRET', SECRET);
-    const primera = getBus();
-    expect(primera).not.toBeNull();
-    expect(primera?.projectId).toBe('vantsnet');
-    expect(primera?.busUrl).toBe(BUS_URL);
-    expect(getBus()).toBe(primera);
-
-// Publicación hacia VANTS-BUS: apagada sin env, firmada y enviada con env.
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { EVENTS, publishBusEvent } from '@/lib/bus/publish';
-
-const URL_BUS = 'https://bus.example.workers.dev';
-const SECRETO = 'secreto-de-prueba';
-
-afterEach(() => {
-  vi.unstubAllEnvs();
-  vi.restoreAllMocks();
-});
-
-describe('publishBusEvent', () => {
+describe('publishBusEvent — publicación con identidad vantsnet', () => {
   it('sin configuración devuelve false y no toca la red', async () => {
     vi.stubEnv('VANTS_BUS_URL', '');
     vi.stubEnv('VANTS_BUS_SECRET', '');
@@ -174,8 +142,8 @@ describe('publishBusEvent', () => {
   });
 
   it('con configuración firma la petición y publica el evento', async () => {
-    vi.stubEnv('VANTS_BUS_URL', URL_BUS);
-    vi.stubEnv('VANTS_BUS_SECRET', SECRETO);
+    vi.stubEnv('VANTS_BUS_URL', BUS_URL);
+    vi.stubEnv('VANTS_BUS_SECRET', SECRET);
     const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({
       ok: true,
       text: async () => '{"ok":true}',
@@ -196,7 +164,7 @@ describe('publishBusEvent', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe(URL_BUS + '/events');
+    expect(url).toBe(BUS_URL + '/events');
     expect(init.method).toBe('POST');
 
     const cabeceras = init.headers as Record<string, string>;
@@ -214,8 +182,8 @@ describe('publishBusEvent', () => {
   });
 
   it('un fallo del bus devuelve false en vez de romper al emisor', async () => {
-    vi.stubEnv('VANTS_BUS_URL', URL_BUS);
-    vi.stubEnv('VANTS_BUS_SECRET', SECRETO);
+    vi.stubEnv('VANTS_BUS_URL', BUS_URL);
+    vi.stubEnv('VANTS_BUS_SECRET', SECRET);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -232,6 +200,5 @@ describe('publishBusEvent', () => {
     });
 
     expect(publicado).toBe(false);
- main
   });
 });

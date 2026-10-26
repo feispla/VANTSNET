@@ -37,14 +37,14 @@ Principio central: **estados honestos**. Si una integración no está configurad
 ## 5. VANTS-BUS (bus de eventos del ecosistema) — 🟡 implementada, pendiente del secreto
 
 - **Módulo**: `src/lib/bus/vants-bus.ts` (cliente, puerto TypeScript del cliente compartido del ecosistema) y `src/lib/bus/publish.ts` (publicación con identidad `vantsnet`).
-- **Qué publica hoy**:
+- **Qué publica hoy** (después de guardar, sin bloquear la respuesta):
 
-  | Evento | Cuándo |
-  | --- | --- |
-  | `tournament.inscriptions_opened` | `PATCH /api/tournaments/[tournamentId]` pasa el torneo a estado `registration` |
-  | `inscription.created` | `POST /api/tournaments/[tournamentId]/registrations` guarda la inscripción |
-  | `match.scheduled` | `POST /api/tournaments/[tournamentId]/matches` crea la partida con fecha (`playedAt`) |
-  | `match.finished` | `PATCH /api/tournaments/[tournamentId]/matches` cierra la partida como `completed` |
+  | Evento | Cuándo | Campos de `data` |
+  | --- | --- | --- |
+  | `tournament.inscriptions_opened` | `POST /api/tournaments` crea el torneo y `PATCH /api/tournaments/[tournamentId]` pasa a estado `registration` | `tournamentId` (slug), `nombre`, `game` |
+  | `inscription.created` | `POST /api/tournaments/[tournamentId]/registrations` guarda la inscripción | `tournamentId` (slug), `teamId`, `game` |
+  | `match.scheduled` | `POST /api/tournaments/[tournamentId]/matches` crea la partida con fecha (`playedAt`) | `matchId`, `game`, `startsAt` |
+  | `match.finished` | `PATCH /api/tournaments/[tournamentId]/matches` cierra la partida como `completed` o `forfeit` | `matchId`, `game`, `a`, `b`, `sa`, `sb`, `finishedAt` |
 
 - **Consumidores**: flask-agents (anuncios en Discord) y VANTS HUB del launcher (notificaciones); `vants-consumer-playvants` copia todos los eventos a `vants_feed`.
 - **Configuración**: `VANTS_BUS_URL` (URL pública del bus) y `VANTS_BUS_SECRET` (secreto HMAC del proyecto `vantsnet` en el bus). El secreto solo vive del lado del servidor.
@@ -64,15 +64,3 @@ No se ha desplegado nada en Cloudflare desde esta fase (requiere autorización y
 
 Estudiada como **referencia de arquitectura** (patrones de caché TTL, persistencia única de partidas, API keys por proyecto, atribución legal). No se usa su código ni su marca, y **no existe API pública de Tracker Network para VALORANT**: la fuente autorizada para Valorant es la plataforma de desarrolladores de Riot Games (verificada en esta fase). Estado de las integraciones resumido en `docs/FINAL_COMPLETION_REPORT.md`.
 
-## 7. VANTS-BUS (bus de eventos del ecosistema) — ✅ implementada, pendiente de credenciales
-
-- **Módulo**: `src/lib/bus/vants-bus.ts` (cliente TypeScript, sin dependencias; mismo contrato que los clientes de Vantsgames, vants-faceit-webhook y flask-agents).
-- **Qué hace**: publica los eventos del prototipo en el bus de eventos de VANTS (`https://vants-bus.vants.workers.dev`) para que `flask-agents` los redacte en Discord y `VANTS HUB` los notifique; `vants-consumer-playvants` los copia a `vants_feed` en Neon.
-- **Eventos publicados** (después de guardar, sin bloquear la respuesta):
-  - `tournament.inscriptions_opened` al crear un torneo: `tournamentId` (slug), `nombre`, `game`.
-  - `inscription.created` al inscribir un equipo: `tournamentId` (slug), `teamId`, `game`.
-  - `match.scheduled` al programar una partida: `matchId`, `game`, `startsAt`.
-  - `match.finished` al cerrar una partida (`completed` o `forfeit`): `matchId`, `game`, `a`, `b`, `sa`, `sb`, `finishedAt`.
-- **Identidad y firma**: cabeceras `X-VANTS-Project: vantsnet`, `X-VANTS-Timestamp` y `X-VANTS-Signature` (`hex(hmac_sha256(secreto, "<timestamp>.<cuerpo>"))`; en `GET` se firma `<timestamp>.`).
-- **Estado honesto**: si faltan `VANTS_BUS_URL` o `VANTS_BUS_SECRET`, el bus queda apagado y el resto de la API funciona igual; los fallos de publicación solo se registran y nunca rompen el endpoint.
-- **Pendiente para activar**: URL del Worker y secreto del proyecto `vantsnet` (los reparte quien administra el Worker `vants-bus`). Documentación del contrato: `/conexiones-entre-repositorios` en vantsgg.mintlify.site.
