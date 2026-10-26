@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, isUniqueViolation, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
-import { EVENTS, publishBusEvent } from '@/lib/bus/vants-bus';
+import { EVENTS, publishBusEvent } from '@/lib/bus/publish';
 import {
   firstIssueMessage,
   slugify,
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     // VANTS-BUS: el torneo quedó creado y acepta inscripciones;
     // flask-agents puede anunciarlo en Discord y VANTS HUB lo notifica.
     // El envío no bloquea la respuesta y queda apagado sin bus.
-    publishBusEvent(EVENTS.TOURNAMENT_OPENED, {
+    void publishBusEvent(EVENTS.TOURNAMENT_OPENED, {
       tournamentId: tournament.slug,
       nombre: tournament.name,
       game: tournament.game,

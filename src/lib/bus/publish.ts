@@ -3,12 +3,14 @@
 // sin configuración no hay red y el resto de la API funciona igual.
 // Un fallo de publicación se registra y devuelve false; NUNCA rompe
 // el endpoint que originó el evento (el evento comunica algo que ya pasó).
-import { VantsBus, type BusEventType } from './vants-bus';
+import {
+  VantsBus,
+  VANTSNET_PROJECT_ID,
+  type BusEventType,
+} from './vants-bus';
 
 // Re-export para que los consumidores importen todo desde un solo sitio.
 export { EVENTS, type BusEventType } from './vants-bus';
-
-const PROJECT_ID = 'vantsnet';
 
 let cliente: VantsBus | null = null;
 let configUrl = '';
@@ -19,7 +21,7 @@ function busCliente(): VantsBus | null {
   const secret = process.env.VANTS_BUS_SECRET;
   if (!url || !secret) return null;
   if (!cliente || configUrl !== url || configSecret !== secret) {
-    cliente = new VantsBus({ busUrl: url, projectId: PROJECT_ID, secret });
+    cliente = new VantsBus({ busUrl: url, projectId: VANTSNET_PROJECT_ID, secret });
     configUrl = url;
     configSecret = secret;
   }

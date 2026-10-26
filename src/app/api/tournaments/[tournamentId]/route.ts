@@ -110,7 +110,7 @@ export async function PATCH(
 
   const t = await db.orm.public.Tournament
     .whereUnique({ id: tournamentId })
-    .select('id', 'status', 'slug', 'game')
+    .select('id', 'status', 'slug', 'name', 'game')
     .first();
   if (!t) {
     return NextResponse.json({ error: 'Torneo no encontrado.' }, { status: 404 });
@@ -130,6 +130,7 @@ export async function PATCH(
   if (parsed.data.status === 'registration' && t.status !== 'registration') {
     void publishBusEvent(EVENTS.TOURNAMENT_OPENED, {
       tournamentId: t.slug,
+      nombre: t.name,
       game: t.game,
     });
   }
