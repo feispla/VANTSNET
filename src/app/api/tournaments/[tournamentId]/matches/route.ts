@@ -9,6 +9,7 @@ import {
   tournamentMatchCreateInput,
   tournamentMatchUpdateInput,
 } from '@/lib/validators';
+import { EVENTS, publishBusEvent } from '@/lib/bus/publish';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,19 @@ export async function POST(
     entityId: match.id,
     detail: { tournament: tournament.name, round: match.round, slot: match.slot },
   });
+  // VANTS-BUS: si la partida se programó con fecha, el ecosistema se entera
+  // (flask-agents y VANTS HUB consumen match.scheduled).
+  if (match.playedAt) {
+    const torneoProgramado = await db.orm.public.Tournament
+      .whereUnique({ id: tournament.id })
+      .select('game')
+      .first();
+    void publishBusEvent(EVENTS.MATCH_SCHEDULED, {
+      matchId: match.id,
+      game: torneoProgramado?.game ?? 'valorant',
+      startsAt: match.playedAt,
+    });
+  }
   return NextResponse.json(
     {
       match: {
@@ -168,6 +182,23 @@ export async function PATCH(
     entityId: match.id,
     detail: { previousStatus: match.status, ...parsed.data },
   });
+  // VANTS-BUS: resultado cerrado. El contrato pide los NOMBRES de los
+  // equipos (a y b) y el marcador (sa y sb); ya están resueltos arriba.
+  if (updated.status === 'completed') {
+    const torneoJugado = await db.orm.public.Tournament
+      .whereUnique({ id: tournamentId })
+      .select('game')
+      .first();
+    void publishBusEvent(EVENTS.MATCH_FINISHED, {
+      matchId: updated.id,
+      game: torneoJugado?.game ?? 'valorant',
+      a: teams.find((t) => t.id === updated.homeTeamId)?.name ?? updated.homeTeamId ?? '',
+      b: teams.find((t) => t.id === updated.awayTeamId)?.name ?? updated.awayTeamId ?? '',
+      sa: updated.homeScore,
+      sb: updated.awayScore,
+      finishedAt: updated.playedAt ?? new Date().toISOString(),
+    });
+  }
   return NextResponse.json({
     match: {
       id: updated.id,

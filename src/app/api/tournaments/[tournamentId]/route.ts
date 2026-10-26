@@ -5,6 +5,7 @@ import { db, toIsoTimestamp } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import { firstIssueMessage, tournamentUpdateInput } from '@/lib/validators';
+import { EVENTS, publishBusEvent } from '@/lib/bus/publish';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,7 +108,10 @@ export async function PATCH(
     return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
   }
 
-  const t = await db.orm.public.Tournament.whereUnique({ id: tournamentId }).select('id').first();
+  const t = await db.orm.public.Tournament
+    .whereUnique({ id: tournamentId })
+    .select('id', 'status', 'slug', 'game')
+    .first();
   if (!t) {
     return NextResponse.json({ error: 'Torneo no encontrado.' }, { status: 404 });
   }
@@ -120,5 +124,14 @@ export async function PATCH(
     entityId: t.id,
     detail: parsed.data,
   });
+  // VANTS-BUS: al abrir inscripciones el resto del ecosistema se entera
+  // (flask-agents puede anunciarlo y VANTS HUB muestra la notificación).
+  // Envío fire-and-forget: nunca ralentiza ni rompe la respuesta.
+  if (parsed.data.status === 'registration' && t.status !== 'registration') {
+    void publishBusEvent(EVENTS.TOURNAMENT_OPENED, {
+      tournamentId: t.slug,
+      game: t.game,
+    });
+  }
   return NextResponse.json({ tournament: updated });
 }

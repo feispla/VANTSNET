@@ -9,6 +9,7 @@ import {
   registrationActionInput,
   registrationCreateInput,
 } from '@/lib/validators';
+import { EVENTS, publishBusEvent } from '@/lib/bus/publish';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,13 @@ export async function POST(
       entity: 'TournamentRegistration',
       entityId: registration.id,
       detail: { tournament: tournament.name, team: team.name },
+    });
+    // VANTS-BUS: la inscripción ya está guardada; flask-agents puede
+    // postearla en Discord y VANTS HUB muestra la notificación.
+    void publishBusEvent(EVENTS.INSCRIPTION_CREATED, {
+      tournamentId: tournament.slug,
+      teamId: team.id,
+      game: tournament.game,
     });
     return NextResponse.json(
       {

@@ -34,7 +34,24 @@ Principio central: **estados honestos**. Si una integración no está configurad
 - **Verificado sin credenciales**: `503 NOT_CONFIGURED` honesto.
 - **Pendiente para activar**: app en developers.faceit.com → server-side key → `FACEIT_API_KEY`.
 
-## 5. Cloudflare — 📋 documentado, pendiente de decisión de despliegue
+## 5. VANTS-BUS (bus de eventos del ecosistema) — 🟡 implementada, pendiente del secreto
+
+- **Módulo**: `src/lib/bus/vants-bus.ts` (cliente, puerto TypeScript del cliente compartido del ecosistema) y `src/lib/bus/publish.ts` (publicación con identidad `vantsnet`).
+- **Qué publica hoy**:
+
+  | Evento | Cuándo |
+  | --- | --- |
+  | `tournament.inscriptions_opened` | `PATCH /api/tournaments/[tournamentId]` pasa el torneo a estado `registration` |
+  | `inscription.created` | `POST /api/tournaments/[tournamentId]/registrations` guarda la inscripción |
+  | `match.scheduled` | `POST /api/tournaments/[tournamentId]/matches` crea la partida con fecha (`playedAt`) |
+  | `match.finished` | `PATCH /api/tournaments/[tournamentId]/matches` cierra la partida como `completed` |
+
+- **Consumidores**: flask-agents (anuncios en Discord) y VANTS HUB del launcher (notificaciones); `vants-consumer-playvants` copia todos los eventos a `vants_feed`.
+- **Configuración**: `VANTS_BUS_URL` (URL pública del bus) y `VANTS_BUS_SECRET` (secreto HMAC del proyecto `vantsnet` en el bus). El secreto solo vive del lado del servidor.
+- **Sin configuración**: `publishBusEvent` devuelve `false` sin tocar la red; la API funciona exactamente igual (mismo principio de estados honestos).
+- **Pendiente para activar**: dar de alta el proyecto `vantsnet` en el bus y poner `VANTS_BUS_SECRET` en el entorno.
+
+## 6. Cloudflare — 📋 documentado, pendiente de decisión de despliegue
 
 VANTSNET es una app Next.js con backend (Prisma + rutas API). Opciones evaluadas en `docs/DEPLOYMENT.md`:
 
@@ -43,6 +60,6 @@ VANTSNET es una app Next.js con backend (Prisma + rutas API). Opciones evaluadas
 
 No se ha desplegado nada en Cloudflare desde esta fase (requiere autorización y credenciales del dominio).
 
-## 6. Referencia técnica: Tracker Network
+## 7. Referencia técnica: Tracker Network
 
 Estudiada como **referencia de arquitectura** (patrones de caché TTL, persistencia única de partidas, API keys por proyecto, atribución legal). No se usa su código ni su marca, y **no existe API pública de Tracker Network para VALORANT**: la fuente autorizada para Valorant es la plataforma de desarrolladores de Riot Games (verificada en esta fase). Estado de las integraciones resumido en `docs/FINAL_COMPLETION_REPORT.md`.
