@@ -5,6 +5,7 @@ import { Trophy } from 'lucide-react';
 import type { Metadata } from 'next';
 import { apiViva, API_VIVA_BASE, type TorneosRespuesta } from '@/lib/api-viva';
 import { PanelError, PanelVacio } from '@/components/vantsnet/estados-honestos';
+import { AnimAparecer } from '@/components/vantsnet/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,8 +61,9 @@ export default async function TorneosPage() {
                 />
               </div>
             ) : (
-              <ul className="mt-3 grid gap-2">
-                {torneos.data.data.items.map((t, i) => {
+              <AnimAparecer>
+                <ul className="mt-3 grid gap-2">
+                  {torneos.data.data.items.map((t, i) => {
                   const { titulo, estado } = textoTorneo(t);
                   return (
                     <li
@@ -77,7 +79,8 @@ export default async function TorneosPage() {
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </AnimAparecer>
             )}
           </>
         )}

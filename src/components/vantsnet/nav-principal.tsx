@@ -13,6 +13,7 @@ import {
   Github,
   Menu,
   Radio,
+  Sparkles,
   Swords,
   Trophy,
   Users,
@@ -69,6 +70,17 @@ const SECCIONES: Seccion[] = [
       { href: '/clips#destacados', titulo: 'Destacados', descripcion: 'Selección de la semana' },
     ],
   },
+  {
+    id: 'ia',
+    etiqueta: 'IA',
+    href: '/ia',
+    icono: Sparkles,
+    descripcion: 'IA Factory: agentes del cuartel y pulso del BUS, en lectura real.',
+    enlaces: [
+      { href: '/ia#agentes', titulo: 'Agentes', descripcion: 'Squad del cuartel flask-Agents' },
+      { href: '/ia#bus', titulo: 'Pulso del BUS', descripcion: 'Últimos eventos de VANTS-BUS' },
+    ],
+  },
 ];
 
 export function NavPrincipal() {
@@ -77,11 +89,14 @@ export function NavPrincipal() {
   const [menuMovil, setMenuMovil] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
-  // Cierra cualquier menú al cambiar de ruta
-  useEffect(() => {
+  // Cierra cualquier menú al cambiar de ruta (patrón React: ajustar estado
+  // durante el render al cambiar una prop — sin effect ni cascada extra).
+  const [pathnameAnterior, setPathnameAnterior] = useState(pathname);
+  if (pathnameAnterior !== pathname) {
+    setPathnameAnterior(pathname);
     setAbierto(null);
     setMenuMovil(false);
-  }, [pathname]);
+  }
 
   // Escape cierra menus + click fuera cierra el mega menú
   useEffect(() => {

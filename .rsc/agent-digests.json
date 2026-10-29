@@ -1,0 +1,9 @@
+{
+  ".claude/agents/developer.md": "bb9b7ddfad2adfe906d9e829564737a8dc24d9821834f69e4fc5c93bfd6cf8fd",
+  ".claude/agents/finding-verifier.md": "5d536ff49566f9ddabb6eb2978262796fae5d4798d278e4cd943aaadef5ee397",
+  ".claude/agents/react-build-resolver.md": "669f157adb60916f69bbcdabfaea80704982d2d9ada14b3405d75f1e5700150b",
+  ".claude/agents/react-reviewer.md": "62cd5c38dd67990b849daa16533bf6803dd624492595e59375c13b1c63896e8a",
+  ".claude/agents/refuter-correctness.md": "68cf58c82b0c3af3d1dabe347f81d577b1c1133696038450eb5f98129a073d2f",
+  ".claude/agents/refuter-security.md": "0c00aeaad89c1443abe2668b34711abf707ee7dd666e82500bd05ceaf7b2f8c0",
+  ".claude/agents/refuter-tests.md": "e8463b44874ceebbe334dadcf0c4566c5f952580a77017ca4fe2428299afd94b"
+}

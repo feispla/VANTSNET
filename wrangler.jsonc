@@ -19,6 +19,16 @@
       "database_id": "df295262-1da7-4483-addb-132310013ffc"
     }
   ],
+  "services": [
+    {
+      "binding": "VANTS_API",
+      "service": "vants"
+    },
+    {
+      "binding": "VANTS_BUS",
+      "service": "vants-bus"
+    }
+  ],
   "observability": {
     "enabled": true
   }

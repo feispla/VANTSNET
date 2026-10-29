@@ -12,6 +12,7 @@ import {
   type JugadoresRespuesta,
 } from '@/lib/api-viva';
 import { PanelError, PanelVacio } from '@/components/vantsnet/estados-honestos';
+import { AnimAparecer } from '@/components/vantsnet/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,10 +42,12 @@ export default async function SalaPage() {
       <h1 className="mt-1 text-2xl font-black tracking-tight text-white">
         La <span className="text-[#FF4655]">Sala</span>
       </h1>
-      <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">
-        El centro de mando de VANTSNET: actividad en directo, roster de jugadores y equipos de la
-        red. Todos los datos vienen de la plataforma real, sin simulaciones.
-      </p>
+      <AnimAparecer>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">
+          El centro de mando de VANTSNET: actividad en directo, roster de jugadores y equipos de la
+          red. Todos los datos vienen de la plataforma real, sin simulaciones.
+        </p>
+      </AnimAparecer>
 
       {/* En vivo */}
       <section id="envivo" className="mt-8 scroll-mt-20">
@@ -60,8 +63,9 @@ export default async function SalaPage() {
               detalle="Cuando un jugador entre en partida y la publique al BUS, aparecerá aquí al instante."
             />
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {enVivo.data.jugadores.map((j, i) => (
+            <AnimAparecer>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {enVivo.data.jugadores.map((j, i) => (
                 <li
                   key={i}
                   className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-200"
@@ -73,7 +77,8 @@ export default async function SalaPage() {
                   {nombreJugadorEnVivo(j)}
                 </li>
               ))}
-            </ul>
+              </ul>
+            </AnimAparecer>
           )}
         </div>
       </section>
@@ -92,7 +97,8 @@ export default async function SalaPage() {
               detalle="El roster se llena cuando las cuentas se vinculan desde el perfil."
             />
           ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-800">
+            <AnimAparecer>
+              <div className="overflow-hidden rounded-xl border border-slate-800">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-500">
                   <tr>
@@ -120,7 +126,8 @@ export default async function SalaPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </AnimAparecer>
           )}
         </div>
       </section>
@@ -139,8 +146,9 @@ export default async function SalaPage() {
               detalle="Los equipos aparecerán cuando se creen desde la plataforma (roster, tag y juego)."
             />
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {equipos.data.data.map((e, i) => (
+            <AnimAparecer>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {equipos.data.data.map((e, i) => (
                 <li
                   key={i}
                   className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-200"
@@ -148,7 +156,8 @@ export default async function SalaPage() {
                   {String(e.nombre ?? e.name ?? e.id ?? 'equipo')}
                 </li>
               ))}
-            </ul>
+              </ul>
+            </AnimAparecer>
           )}
         </div>
       </section>
@@ -164,8 +173,9 @@ export default async function SalaPage() {
           ) : juegos.data.data.length === 0 ? (
             <PanelVacio titulo="Sin juegos configurados" detalle="La plataforma aún no tiene juegos activos." />
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {juegos.data.data.map((g) => (
+            <AnimAparecer>
+              <div className="flex flex-wrap gap-2">
+                {juegos.data.data.map((g) => (
                 <span
                   key={g.slug}
                   className="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-bold text-slate-200"
@@ -174,7 +184,8 @@ export default async function SalaPage() {
                   {!g.activo && <span className="ml-1.5 text-[10px] text-slate-500">(inactivo)</span>}
                 </span>
               ))}
-            </div>
+              </div>
+            </AnimAparecer>
           )}
         </div>
       </section>

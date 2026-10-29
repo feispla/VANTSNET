@@ -5,6 +5,7 @@ import { Clapperboard } from 'lucide-react';
 import type { Metadata } from 'next';
 import { apiViva, API_VIVA_BASE, type ClipsRespuesta } from '@/lib/api-viva';
 import { PanelError, PanelVacio } from '@/components/vantsnet/estados-honestos';
+import { AnimAparecer } from '@/components/vantsnet/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,8 @@ export default async function ClipsPage() {
             detalle="No hay clips destacados publicados ahora mismo. Vuelve pronto."
           />
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <AnimAparecer>
+            <ul className="grid gap-3 sm:grid-cols-2">
             {clips.data.clips.map((c) => (
               <li
                 key={c.id}
@@ -87,6 +89,7 @@ export default async function ClipsPage() {
               </li>
             ))}
           </ul>
+          </AnimAparecer>
         )}
       </section>
     </div>

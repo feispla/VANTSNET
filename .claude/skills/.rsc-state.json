@@ -1,0 +1,317 @@
+{
+  "skills": {
+    "analyze": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/analyze"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/analyze"
+    },
+    "automation-strategy": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/automation-strategy"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/automation-strategy"
+    },
+    "clarify": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/clarify"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/clarify"
+    },
+    "connect-tool": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/connect-tool"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/connect-tool"
+    },
+    "constitution": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/constitution"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/constitution"
+    },
+    "debug": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/debug"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/debug"
+    },
+    "decision-challenge": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/decision-challenge"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/decision-challenge"
+    },
+    "deprecation": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/deprecation"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/deprecation"
+    },
+    "design": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/design"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/design"
+    },
+    "fable-operator": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/fable-operator"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/fable-operator"
+    },
+    "ftd": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/ftd"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/ftd"
+    },
+    "harness": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/harness"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/harness"
+    },
+    "idea-refinement": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/idea-refinement"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/idea-refinement"
+    },
+    "implement": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/implement"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/implement"
+    },
+    "init": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/init"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/init"
+    },
+    "nextjs": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/nextjs"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/nextjs"
+    },
+    "orient": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/orient"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/orient"
+    },
+    "parallel": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/parallel"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/parallel"
+    },
+    "plan": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/plan"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/plan"
+    },
+    "react": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/react"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/react"
+    },
+    "review": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/review"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/review"
+    },
+    "sdd": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/sdd"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/sdd"
+    },
+    "sdd-init": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/sdd-init"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/sdd-init"
+    },
+    "ship": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/ship"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/ship"
+    },
+    "simplify-code": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/simplify-code"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/simplify-code"
+    },
+    "source-grounded-development": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/source-grounded-development"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/source-grounded-development"
+    },
+    "specify": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/specify"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/specify"
+    },
+    "suggest": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/suggest"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/suggest"
+    },
+    "tasks": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/tasks"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/tasks"
+    },
+    "unslop": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/unslop"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/unslop"
+    },
+    "ux": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/ux"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/ux"
+    },
+    "verify": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/verify"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/verify"
+    },
+    "worktrees": {
+      "files": [
+        "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/skills/worktrees"
+      ],
+      "base": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/skills/worktrees"
+    }
+  },
+  "agents": [
+    "developer",
+    "finding-verifier",
+    "react-build-resolver",
+    "react-reviewer",
+    "refuter-correctness",
+    "refuter-security",
+    "refuter-tests"
+  ],
+  "agentCollisions": [],
+  "agentsKept": [],
+  "explicitAgents": [],
+  "memory": {
+    "mode": "full",
+    "reason": "wired",
+    "paths": [
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/session-memory-core.mjs",
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/session-memory-adapter.mjs",
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/session-memory.mjs",
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/settings.local.json"
+    ]
+  },
+  "update": {
+    "mode": "hook"
+  },
+  "knowledge": {
+    "mode": "wired",
+    "reason": null,
+    "paths": [
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/knowledge-sync.mjs",
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.rsc/trunk-policy.mjs",
+      "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/settings.local.json"
+    ]
+  },
+  "gitPermissions": {
+    "mode": "wired",
+    "path": "/home/z/my-project/scripts/repos/audit/VANTSnetwork/.claude/settings.json"
+  },
+  "policy": {
+    "baseAgents": true,
+    "alwaysOn": true,
+    "codeHooks": true,
+    "dangerGuard": true,
+    "laneGate": true,
+    "gitmojiGuard": true,
+    "memory": true,
+    "context7": false
+  },
+  "commands": [
+    "build-fix",
+    "checkpoint",
+    "learn",
+    "nextjs-build",
+    "nextjs-review",
+    "react-build",
+    "react-review",
+    "resume-session",
+    "save-session"
+  ],
+  "commandCollisions": [],
+  "version": "3.5.0",
+  "ignoreEntriesAdded": [
+    ".claude/agents/developer.md",
+    ".claude/agents/finding-verifier.md",
+    ".claude/agents/react-build-resolver.md",
+    ".claude/agents/react-reviewer.md",
+    ".claude/agents/refuter-correctness.md",
+    ".claude/agents/refuter-security.md",
+    ".claude/agents/refuter-tests.md",
+    ".claude/commands/build-fix.md",
+    ".claude/commands/checkpoint.md",
+    ".claude/commands/learn.md",
+    ".claude/commands/nextjs-build.md",
+    ".claude/commands/nextjs-review.md",
+    ".claude/commands/react-build.md",
+    ".claude/commands/react-review.md",
+    ".claude/commands/resume-session.md",
+    ".claude/commands/save-session.md",
+    ".claude/skills/.rsc-state.json",
+    ".claude/skills/analyze",
+    ".claude/skills/automation-strategy",
+    ".claude/skills/clarify",
+    ".claude/skills/connect-tool",
+    ".claude/skills/constitution",
+    ".claude/skills/debug",
+    ".claude/skills/decision-challenge",
+    ".claude/skills/deprecation",
+    ".claude/skills/design",
+    ".claude/skills/fable-operator",
+    ".claude/skills/ftd",
+    ".claude/skills/harness",
+    ".claude/skills/idea-refinement",
+    ".claude/skills/implement",
+    ".claude/skills/init",
+    ".claude/skills/nextjs",
+    ".claude/skills/orient",
+    ".claude/skills/parallel",
+    ".claude/skills/plan",
+    ".claude/skills/react",
+    ".claude/skills/review",
+    ".claude/skills/sdd",
+    ".claude/skills/sdd-init",
+    ".claude/skills/ship",
+    ".claude/skills/simplify-code",
+    ".claude/skills/source-grounded-development",
+    ".claude/skills/specify",
+    ".claude/skills/suggest",
+    ".claude/skills/tasks",
+    ".claude/skills/unslop",
+    ".claude/skills/ux",
+    ".claude/skills/verify",
+    ".claude/skills/worktrees",
+    ".rsc",
+    ".worktrees"
+  ]
+}
