@@ -51,3 +51,32 @@ jobs:
         run: |
           echo "### Resultado CI" >> "$GITHUB_STEP_SUMMARY"
           echo "- Lint: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
+  opennext-preview:
+    name: Build OpenNext (CF Workers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://prisma:prisma@localhost:5432/vantsnet_ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependencias (lockfile congelado)
+        run: bun install --frozen-lockfile
+
+      - name: Build OpenNext para Cloudflare Workers
+        # Valida que el bundle del worker (vantsnet-preview) sigue compilando:
+        # OpenNext empaqueta con condición workerd y falla si falta el tracing
+        # de pg-cloudflare (ver next.config.ts). NO despliega nada.
+        run: bunx opennextjs-cloudflare build
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "### OpenNext (CF Workers)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bundle worker: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

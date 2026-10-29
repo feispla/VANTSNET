@@ -89,11 +89,14 @@ export function NavPrincipal() {
   const [menuMovil, setMenuMovil] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
-  // Cierra cualquier menú al cambiar de ruta
-  useEffect(() => {
+  // Cierra cualquier menú al cambiar de ruta (patrón React: ajustar estado
+  // durante el render al cambiar una prop — sin effect ni cascada extra).
+  const [pathnameAnterior, setPathnameAnterior] = useState(pathname);
+  if (pathnameAnterior !== pathname) {
+    setPathnameAnterior(pathname);
     setAbierto(null);
     setMenuMovil(false);
-  }, [pathname]);
+  }
 
   // Escape cierra menus + click fuera cierra el mega menú
   useEffect(() => {
