@@ -13,6 +13,7 @@ import {
   Github,
   Menu,
   Radio,
+  Sparkles,
   Swords,
   Trophy,
   Users,
@@ -67,6 +68,17 @@ const SECCIONES: Seccion[] = [
     descripcion: 'La vitrina: las mejores jugadas de la comunidad.',
     enlaces: [
       { href: '/clips#destacados', titulo: 'Destacados', descripcion: 'Selección de la semana' },
+    ],
+  },
+  {
+    id: 'ia',
+    etiqueta: 'IA',
+    href: '/ia',
+    icono: Sparkles,
+    descripcion: 'IA Factory: agentes del cuartel y pulso del BUS, en lectura real.',
+    enlaces: [
+      { href: '/ia#agentes', titulo: 'Agentes', descripcion: 'Squad del cuartel flask-Agents' },
+      { href: '/ia#bus', titulo: 'Pulso del BUS', descripcion: 'Últimos eventos de VANTS-BUS' },
     ],
   },
 ];

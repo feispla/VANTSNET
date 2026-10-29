@@ -7,30 +7,21 @@
 //     worker de preview la vía válida es el binding de servicio.
 //  2. fetch público (fallback para `next dev` local, sin bindings).
 
+import { envCf, type EnlaceServicio } from './cf-env';
+
 const BASE = process.env.VANTS_API_VIVA ?? 'https://vants.vants.workers.dev';
 
 export const API_VIVA_BASE = BASE;
 
-// Interfaz mínima de un service binding (evita depender de @cloudflare/workers-types)
-interface EnlaceServicio {
-  fetch: (url: string, init?: RequestInit) => Promise<Response>;
-}
-
 export type ResultadoVivo<T> = { ok: true; data: T } | { ok: false; motivo: string };
 
-// Resuelve el binding una sola vez por isolado (memoizado por proceso)
+// Resuelve el service binding `VANTS_API` una sola vez por isolado
 let enlaceMemo: EnlaceServicio | null | undefined;
 
 async function obtenerEnlace(): Promise<EnlaceServicio | null> {
   if (enlaceMemo !== undefined) return enlaceMemo;
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const { env } = await getCloudflareContext({ async: true });
-    enlaceMemo = (env as { VANTS_API?: EnlaceServicio }).VANTS_API ?? null;
-  } catch {
-    // Fuera del runtime de Cloudflare (next dev sin platformProxy): fallback público.
-    enlaceMemo = null;
-  }
+  const env = await envCf();
+  enlaceMemo = (env?.VANTS_API as EnlaceServicio | undefined) ?? null;
   return enlaceMemo;
 }
 
