@@ -13,6 +13,7 @@ import {
   type AgenteCuartel,
 } from '@/lib/iafactory';
 import { PanelError, PanelVacio } from '@/components/vantsnet/estados-honestos';
+import { AnimAparecer } from '@/components/vantsnet/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,11 +137,13 @@ export default async function IaPage() {
             detalle="La API /api/agentes respondió sin agentes. Si el cuartel está desplegando, puede tardar unos minutos."
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {agentes.data.agentes.map((a) => (
-              <TarjetaAgente key={a.id} a={a} />
-            ))}
-          </div>
+          <AnimAparecer>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {agentes.data.agentes.map((a) => (
+                <TarjetaAgente key={a.id} a={a} />
+              ))}
+            </div>
+          </AnimAparecer>
         )}
       </section>
 
@@ -175,7 +178,8 @@ export default async function IaPage() {
               detalle="El BUS está conectado y respondió, pero no hay eventos en este momento. Cuando la plataforma publique (partidas, torneos, clips), aparecerán aquí."
             />
           ) : (
-            <ul className="space-y-2">
+            <AnimAparecer>
+              <ul className="space-y-2">
               {bus.eventos.map((ev) => (
                 <li
                   key={ev.id}
@@ -194,7 +198,8 @@ export default async function IaPage() {
                   </pre>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </AnimAparecer>
           )}
         </div>
       </section>
