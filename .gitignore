@@ -32,3 +32,6 @@ next-env.d.ts
 /coverage
 .prisma-composer/
 .alchemy/
+
+# rsc-harness: backups de transacciones de onboarding (estado runtime, no versionar)
+.rsc/backups/
