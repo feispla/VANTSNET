@@ -1,0 +1,25 @@
+// Wrangler — despliegue PREVIEW de VANTSNET en Cloudflare Workers (OpenNext).
+// Rama: preview/vants-cf. NO afecta al worker de producción `vants` ni a la
+// D1 de producción `vants-db`. La BD de este preview es la D1 aislada
+// `vants-preview-db` (cuenta 8f2424e95fec4860e19257226f209fbc).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vantsnet-preview",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vants-preview-db",
+      "database_id": "df295262-1da7-4483-addb-132310013ffc"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

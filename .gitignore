@@ -6,6 +6,10 @@ node_modules/
 out/
 build/
 
+# cloudflare workers (preview OpenNext)
+.open-next/
+.wrangler/
+
 # environment (NUNCA subir claves)
 .env
 .env.*
